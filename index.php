@@ -1,7 +1,5 @@
 <?php 
-// index.php
 session_start();
-// If user is already logged in, redirect them to the dashboard
 if(isset($_SESSION['user_id'])){
     header("Location: modules/dashboard.php");
     exit();

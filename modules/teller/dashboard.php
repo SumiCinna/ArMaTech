@@ -13,11 +13,31 @@ $teller_name = $_SESSION['full_name'];
 $sql_count = "SELECT COUNT(*) as total FROM transactions WHERE DATE(date_pawned) = CURDATE()";
 $count_today = $conn->query($sql_count)->fetch_assoc()['total'] ?? 0;
 
-// 2. Get Recent Transactions
-$sql_recent = "SELECT t.pt_number, t.principal_amount, t.date_pawned, p.first_name, p.last_name 
-               FROM transactions t
-               JOIN profiles p ON t.customer_id = p.profile_id
-               ORDER BY t.date_pawned DESC LIMIT 5";
+// 2. Get Recent Transactions (Union of New Pawns and Payments)
+$sql_recent = "
+    (SELECT 
+        t.pt_number, 
+        CONCAT(p.first_name, ' ', p.last_name) AS customer_name,
+        'New Pawn' AS type,
+        t.principal_amount AS amount,
+        t.date_pawned AS date_time
+    FROM transactions t
+    JOIN profiles p ON t.customer_id = p.profile_id)
+    
+    UNION ALL
+    
+    (SELECT 
+        t.pt_number,
+        CONCAT(p.first_name, ' ', p.last_name) AS customer_name,
+        pay.payment_type AS type,
+        pay.amount_paid AS amount,
+        pay.date_paid AS date_time
+    FROM payments pay
+    JOIN transactions t ON pay.transaction_id = t.transaction_id
+    JOIN profiles p ON t.customer_id = p.profile_id)
+    
+    ORDER BY date_time DESC 
+    LIMIT 10";
 $recent_txns = $conn->query($sql_recent);
 
 $cash_on_hand = 0.00; 
@@ -125,13 +145,47 @@ include_once '../../includes/teller_header.php';
                 <tbody>
                     <?php if ($recent_txns && $recent_txns->num_rows > 0): ?>
                         <?php while($row = $recent_txns->fetch_assoc()): ?>
+                            <?php
+                                // Determine Display Logic
+                                $badge_class = "bg-secondary";
+                                $type_label = $row['type'];
+                                $amount_class = "text-dark";
+                                $amount_prefix = "₱";
+
+                                switch($row['type']) {
+                                    case 'New Pawn':
+                                        $badge_class = "bg-primary";
+                                        $type_label = "New Pawn";
+                                        $amount_class = "text-danger"; // Money Out
+                                        $amount_prefix = "- ₱";
+                                        break;
+                                    case 'interest_only':
+                                        $badge_class = "bg-info text-dark";
+                                        $type_label = "Renewal";
+                                        $amount_class = "text-success"; // Money In
+                                        $amount_prefix = "+ ₱";
+                                        break;
+                                    case 'partial_payment':
+                                        $badge_class = "bg-warning text-dark";
+                                        $type_label = "Partial Pay";
+                                        $amount_class = "text-success";
+                                        $amount_prefix = "+ ₱";
+                                        break;
+                                    case 'full_redemption':
+                                        $badge_class = "bg-success";
+                                        $type_label = "Redemption";
+                                        $amount_class = "text-success";
+                                        $amount_prefix = "+ ₱";
+                                        break;
+                                }
+                            ?>
                             <tr>
                                 <td><strong><?php echo htmlspecialchars($row['pt_number']); ?></strong></td>
-                                <td><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></td>
-                                <td><span class="badge bg-primary">New Pawn</span></td>
-                                <td>₱<?php echo number_format($row['principal_amount'], 2); ?></td>
-                                <td><?php echo date('M d, Y', strtotime($row['date_pawned'])); ?></td>
-                                <td><span class="badge bg-success-subtle text-success border border-success">Active</span></td>
+                                <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                                <td><span class="badge <?php echo $badge_class; ?>"><?php echo $type_label; ?></span></td>
+                                <td class="<?php echo $amount_class; ?> fw-bold"><?php echo $amount_prefix . number_format($row['amount'], 2); ?></td>
+                                <td><?php echo date('M d, h:i A', strtotime($row['date_time'])); ?></td>
+                                <td><i class="bi bi-check-circle-fill text-success"></i></td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>

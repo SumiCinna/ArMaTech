@@ -55,6 +55,9 @@ if (!isset($_SESSION['account_id']) || $_SESSION['role'] !== 'teller') {
         <li class="nav-item">
             <a class="nav-link" href="search.php"><i class="bi bi-search"></i> Search</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" href="transactions.php"><i class="bi bi-file-earmark-text"></i> Transactions</a>
+        </li>
       </ul>
       
       <div class="d-flex align-items-center text-white">
