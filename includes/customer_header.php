@@ -81,10 +81,12 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
                     <a class="nav-link <?php echo ($activePage == 'transactions') ? 'active fw-bold' : ''; ?>" href="transactions.php">Transactions</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">My Profile</a>
+                    <a class="nav-link <?php echo ($activePage == 'interest_calculator') ? 'active fw-bold' : ''; ?>" href="interest_calculator.php">Interest Calculator</a>
                 </li>
                 <li class="nav-item ms-3">
-                    <a href="../../core/logout.php" class="btn btn-sm btn-light text-dark fw-bold px-3 rounded-pill">Logout</a>
+                    <a class="nav-link text-danger fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                        <i class="fa-solid fa-power-off me-1"></i> Logout
+                    </a>
                 </li>
             </ul>
         </div>

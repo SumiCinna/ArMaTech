@@ -31,6 +31,20 @@ $total_principal = array_sum(array_column($txns, 'principal_amount'));
         </div>
     </div>
 
+    <div class="col-md-12 mb-4">
+        <div class="card border-0 shadow-sm bg-primary text-white">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="fw-bold">Plan your next payment</h4>
+                    <p class="mb-0 text-white-50">Use our interest simulator to calculate fees ahead of time.</p>
+                </div>
+                <a href="interest_calculator.php" class="btn btn-light fw-bold text-primary px-4 py-2 rounded-pill">
+                    Open Calculator
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="stat-card bg-white p-4 mb-3">
