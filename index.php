@@ -19,7 +19,7 @@ include_once 'includes/header.php';
                 </p>
                 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                    <a href="login.php" class="btn btn-primary btn-lg px-5 gap-3 fw-bold rounded-pill">
+                    <a href="customer_login.php" class="btn btn-primary btn-lg px-5 gap-3 fw-bold rounded-pill">
                         Get an Estimate
                     </a>
                     <a href="register.php" class="btn btn-outline-light btn-lg px-5 rounded-pill">

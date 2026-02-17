@@ -52,7 +52,7 @@
       <ul class="navbar-nav ms-auto">
         <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
         <li class="nav-item"><a class="nav-link" href="#about">About Us</a></li>
-        <li class="nav-item"><a class="btn btn-warning ms-2 text-dark" href="login.php">Login</a></li>
+        <li class="nav-item"><a class="btn btn-warning ms-2 text-dark" href="customer_login.php">Login</a></li>
       </ul>
     </div>
   </div>
