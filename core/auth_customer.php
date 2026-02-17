@@ -16,7 +16,7 @@ if (isset($_POST['btn_login'])) {
 
     // 2. Check Database
     // We specifically check role = 'customer' so Tellers/Admins can't log in here
-    $sql = "SELECT a.account_id, a.password, a.role, p.profile_id, p.first_name, p.last_name, p.public_id 
+    $sql = "SELECT a.account_id, a.password, a.role, a.force_change, p.profile_id, p.first_name, p.last_name, p.public_id 
             FROM accounts a 
             JOIN profiles p ON a.profile_id = p.profile_id 
             WHERE a.username = ? AND a.role = 'customer' 
@@ -42,6 +42,12 @@ if (isset($_POST['btn_login'])) {
                 $_SESSION['username']   = $row['username']; // or public_id
                 $_SESSION['public_id']  = $row['public_id'];
                 $_SESSION['fullname']   = $row['first_name'] . ' ' . $row['last_name'];
+
+                // Check if they need to change password (force_change == 1)
+                if ($row['force_change'] == 1) {
+                    header("Location: ../modules/customer/force_password_change.php");
+                    exit();
+                }
 
                 // Success Redirect
                 header("Location: ../modules/customer/dashboard.php");

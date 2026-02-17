@@ -8,6 +8,21 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'customer') {
     exit();
 }
 
+// 2. CHECK FORCE CHANGE STATUS (The Gatekeeper)
+require_once '../../config/database.php';
+
+$check_sql = "SELECT force_change FROM accounts WHERE account_id = ?";
+$check_stmt = $conn->prepare($check_sql);
+$check_stmt->bind_param("i", $_SESSION['account_id']);
+$check_stmt->execute();
+$check_res = $check_stmt->get_result()->fetch_assoc();
+
+$current_page = basename($_SERVER['PHP_SELF']);
+if ($check_res && $check_res['force_change'] == 1 && $current_page != 'force_password_change.php') {
+    header("Location: force_password_change.php");
+    exit();
+}
+
 $activePage = basename($_SERVER['PHP_SELF'], ".php");
 ?>
 <!DOCTYPE html>
