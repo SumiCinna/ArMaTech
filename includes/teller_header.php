@@ -1,13 +1,31 @@
 <?php
-// Ensure session is started if not already
+// includes/teller_header.php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Security Check: If they are not logged in as Teller, kick them out
-// (This is a backup check in case the main page forgot it)
+// 1. Check Login
 if (!isset($_SESSION['account_id']) || $_SESSION['role'] !== 'teller') {
     header("Location: ../../teller_login.php");
+    exit();
+}
+
+// 2. GATEKEEPER: Check Force Change Status
+require_once '../../config/database.php';
+
+// We query the DB to be absolutely sure
+$gate_sql = "SELECT force_change FROM accounts WHERE account_id = ?";
+$gate_stmt = $conn->prepare($gate_sql);
+$gate_stmt->bind_param("i", $_SESSION['account_id']);
+$gate_stmt->execute();
+$gate_res = $gate_stmt->get_result()->fetch_assoc();
+
+$current_page = basename($_SERVER['PHP_SELF']);
+
+// If force_change is 1 AND they are NOT on the change password page
+if ($gate_res['force_change'] == 1 && $current_page != 'force_password_change.php') {
+    // Force redirect back to security page
+    header("Location: ../teller/force_password_change.php");
     exit();
 }
 ?>

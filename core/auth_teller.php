@@ -5,12 +5,13 @@ require_once '../config/database.php';
 if (isset($_POST['btn_teller_login'])) {
     
     $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    $password = $_POST['password']; // Removed trim() to ensure exact match with hash
     $sql = "SELECT 
                 a.account_id, 
                 a.username, 
                 a.password, 
                 a.role, 
+                a.force_change,
                 p.profile_id, 
                 p.first_name, 
                 p.last_name 
@@ -38,6 +39,12 @@ if (isset($_POST['btn_teller_login'])) {
         $_SESSION['full_name']  = $user['first_name'] . " " . $user['last_name'];
         $_SESSION['role']       = $user['role'];
 
+        // Check Force Change
+        if ($user['force_change'] == 1) {
+            header("Location: ../modules/teller/force_password_change.php");
+            exit();
+        }
+        // ------------------------------------
 
         header("Location: ../modules/teller/dashboard.php");
         exit();
