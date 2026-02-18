@@ -8,10 +8,27 @@ if (!isset($_SESSION['account_id']) || !in_array($_SESSION['role'], ['teller', '
 }
 
 $teller_name = $_SESSION['full_name'];
+$teller_id = $_SESSION['account_id'];
 
 // 1. Get Transactions Today Count
 $sql_count = "SELECT COUNT(*) as total FROM transactions WHERE DATE(date_pawned) = CURDATE()";
 $count_today = $conn->query($sql_count)->fetch_assoc()['total'] ?? 0;
+
+// 2. Get Total Pawn Value (Money Out) - Teller Specific
+$sql_pawn = "SELECT SUM(i.appraised_value) as total FROM transactions t 
+             JOIN items i ON t.transaction_id = i.transaction_id 
+             WHERE t.teller_id = ? AND DATE(t.date_pawned) = CURDATE()";
+$stmt = $conn->prepare($sql_pawn);
+$stmt->bind_param("i", $teller_id);
+$stmt->execute();
+$total_pawn = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+
+// 3. Get Total Payments (Money In) - Teller Specific
+$sql_pay = "SELECT SUM(amount_paid) as total FROM payments WHERE teller_id = ? AND DATE(date_paid) = CURDATE()";
+$stmt = $conn->prepare($sql_pay);
+$stmt->bind_param("i", $teller_id);
+$stmt->execute();
+$total_pay = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
 
 // 2. Get Recent Transactions (Union of New Pawns and Payments)
 $sql_recent = "
@@ -40,8 +57,6 @@ $sql_recent = "
     LIMIT 10";
 $recent_txns = $conn->query($sql_recent);
 
-$cash_on_hand = 0.00; 
-
 include_once '../../includes/teller_header.php';
 ?>
 
@@ -50,7 +65,31 @@ include_once '../../includes/teller_header.php';
 <div class="container">
     
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title text-muted text-uppercase small fw-bold">Total Pawned (Out)</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="display-6 fw-bold text-danger me-3">₱<?php echo number_format($total_pawn, 2); ?></div>
+                        <div class="text-danger bg-danger-subtle rounded p-2"><i class="bi bi-dash-circle fs-4"></i></div>
+                    </div>
+                    <small class="text-muted">Principal released today</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="card-title text-muted text-uppercase small fw-bold">Total Payments (In)</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="display-6 fw-bold text-success me-3">₱<?php echo number_format($total_pay, 2); ?></div>
+                        <div class="text-success bg-success-subtle rounded p-2"><i class="bi bi-plus-circle fs-4"></i></div>
+                    </div>
+                    <small class="text-muted">Collections processed today</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <h6 class="card-title text-muted text-uppercase small fw-bold">Transactions Today</h6>
@@ -58,29 +97,18 @@ include_once '../../includes/teller_header.php';
                         <div class="display-6 fw-bold text-dark me-3"><?php echo $count_today; ?></div>
                         <div class="text-primary bg-primary-subtle rounded p-2"><i class="bi bi-receipt fs-4"></i></div>
                     </div>
+                    <small class="text-muted">Total activity count</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body">
-                    <h6 class="card-title text-muted text-uppercase small fw-bold">Cash Drawer</h6>
-                    <div class="d-flex align-items-center">
-                        <div class="display-6 fw-bold text-dark me-3">₱<?php echo number_format($cash_on_hand, 2); ?></div>
-                        <div class="text-success bg-success-subtle rounded p-2"><i class="bi bi-wallet2 fs-4"></i></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="alert alert-light border-0 shadow-sm d-flex align-items-center h-100">
+    </div>
+
+    <div class="alert alert-light border-0 shadow-sm d-flex align-items-center mb-4">
                 <i class="bi bi-info-circle-fill text-info fs-4 me-3"></i>
                 <div>
                     <strong class="text-dark">System Notice:</strong> 
                     Reminder to check ID expiration dates for all high-value transactions.
                 </div>
-            </div>
-        </div>
     </div>
 
     <h5 class="mb-3 text-secondary fw-bold">Quick Operations</h5>
