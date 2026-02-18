@@ -148,11 +148,11 @@ $grand_total = $total_principal + $total_interest;
                         $border_color = 'border-danger';
                         $progress_val = 100;
                         $progress_color = 'bg-danger';
-                    } elseif ($days_until_due < 0) {
-                        $status_badge = '<span class="badge bg-warning text-dark">OVERDUE (' . abs($days_until_due) . ' days)</span>';
-                        $border_color = 'border-warning';
-                        $progress_val = 90;
-                        $progress_color = 'bg-warning';
+                    } elseif ($days_until_due <= 0) {
+                        $status_badge = '<span class="badge bg-danger text-white">MATURED / OVERDUE (' . abs($days_until_due) . ' days)</span>';
+                        $border_color = 'border-danger';
+                        $progress_val = 100;
+                        $progress_color = 'bg-danger';
                     } elseif ($days_until_due <= 3) {
                         $status_badge = '<span class="badge bg-warning bg-opacity-25 text-dark">Due Soon (' . $days_until_due . ' days)</span>';
                         $border_color = 'border-warning';
