@@ -51,7 +51,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
         
         .list-group-item { 
             background: transparent; 
-            color: #94a3b8; 
+            color: rgba(255, 255, 255, 0.8); 
             border: none; 
             padding: 16px 24px; 
             font-weight: 500;
@@ -70,6 +70,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
             font-weight: 700;
         }
         .list-group-item i { width: 24px; text-align: center; margin-right: 10px; }
+        .sidebar-label { color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; letter-spacing: 1px; }
 
         /* Dashboard Cards */
         .admin-card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
@@ -86,7 +87,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
                 <i class="fa-solid fa-gauge-high"></i> Dashboard
             </a>
             
-            <small class="text-uppercase text-muted fw-bold px-3 mt-3 mb-1" style="font-size:0.75rem;">Management</small>
+            <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Management</div>
             
             <a href="manage_staff.php" class="list-group-item <?php echo ($activePage == 'manage_staff') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-users-gear"></i> Staff / Tellers
@@ -95,7 +96,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
                 <i class="fa-solid fa-users"></i> Customers
             </a>
             
-            <small class="text-uppercase text-muted fw-bold px-3 mt-3 mb-1" style="font-size:0.75rem;">Reports</small>
+            <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Reports</div>
             
             <a href="reports_sales.php" class="list-group-item <?php echo ($activePage == 'reports_sales') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-chart-line"></i> Sales Report

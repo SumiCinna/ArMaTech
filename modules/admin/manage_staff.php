@@ -5,7 +5,7 @@ include_once '../../includes/admin_header.php';
 
 // Fetch all staff (Tellers & Admins)
 // We join accounts + profiles + addresses to get full info
-$sql = "SELECT p.*, a.account_id, a.username, a.role 
+$sql = "SELECT p.*, a.account_id, a.username, a.role, a.status 
         FROM accounts a
         JOIN profiles p ON a.profile_id = p.profile_id
         LEFT JOIN addresses ad ON p.profile_id = ad.profile_id
@@ -74,16 +74,26 @@ $result = $conn->query($sql);
                                     </td>
                                     <td><?php echo ($row['date_hired']) ? date('M d, Y', strtotime($row['date_hired'])) : 'N/A'; ?></td>
                                     <td>
-                                        <span class="badge bg-success bg-opacity-10 text-success px-3 rounded-pill">Active</span>
+                                        <?php if ($row['status'] === 'active'): ?>
+                                            <span class="badge bg-success bg-opacity-10 text-success px-3 rounded-pill">Active</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger px-3 rounded-pill">Disabled</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-light text-primary" title="View Details">
+                                            <a href="view_staff_profile.php?id=<?php echo $row['account_id']; ?>" class="btn btn-sm btn-light text-primary border" title="View Full Profile">
                                                 <i class="fa-solid fa-eye"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-light text-danger" title="Deactivate Account">
-                                                <i class="fa-solid fa-user-slash"></i>
-                                            </button>
+                                            </a>
+                                            <?php if ($row['status'] === 'active'): ?>
+                                                <a href="../../core/toggle_status.php?id=<?php echo $row['account_id']; ?>&current=active" class="btn btn-sm btn-light text-danger" title="Disable Account">
+                                                    <i class="fa-solid fa-user-slash"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="../../core/toggle_status.php?id=<?php echo $row['account_id']; ?>&current=inactive" class="btn btn-sm btn-light text-success" title="Reactivate Account">
+                                                    <i class="fa-solid fa-user-check"></i>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
