@@ -101,7 +101,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
             <a href="reports_sales.php" class="list-group-item <?php echo ($activePage == 'reports_sales') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-chart-line"></i> Sales Report
             </a>
-            <a href="reports_inventory.php" class="list-group-item <?php echo ($activePage == 'reports_inventory') ? 'active' : ''; ?>">
+            <a href="inventory.php" class="list-group-item <?php echo ($activePage == 'reports_inventory') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-warehouse"></i> Inventory
             </a>
             
