@@ -5,7 +5,7 @@ include_once '../../includes/admin_header.php';
 
 // SEARCH LOGIC
 $search = $_GET['search'] ?? '';
-$sql = "SELECT p.*, a.account_id, a.username, 
+$sql = "SELECT p.*, a.account_id, a.username, a.status,
         CONCAT(ad.house_no_street, ', ', ad.barangay, ', ', ad.city, ', ', ad.province) AS full_address 
         FROM accounts a
         JOIN profiles p ON a.profile_id = p.profile_id
@@ -95,32 +95,29 @@ if (!$result) {
                                         <small class="text-muted fw-bold"><?php echo date('M d, Y', strtotime($row['created_at'])); ?></small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-success bg-opacity-10 text-success px-3 rounded-pill fw-bold">Active</span>
+                                        <?php if ($row['status'] === 'active'): ?>
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 rounded-pill">Active</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 rounded-pill">Disabled</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <div class="dropdown">
-                                            <button class="btn btn-light btn-sm border shadow-sm" type="button" data-bs-toggle="dropdown">
-                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        <div class="btn-group shadow-sm">
+                                            <a href="view_customer_history.php?id=<?php echo $row['account_id']; ?>" class="btn btn-sm btn-light border text-primary" title="Transaction History">
+                                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-light border text-warning" data-bs-toggle="modal" data-bs-target="#resetModal<?php echo $row['account_id']; ?>" title="Reset Password">
+                                                <i class="fa-solid fa-key"></i>
                                             </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                                <li><h6 class="dropdown-header text-uppercase small fw-bold">Manage Account</h6></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="view_customer_history.php?id=<?php echo $row['account_id']; ?>">
-                                                        <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i> Transaction History
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#resetModal<?php echo $row['account_id']; ?>">
-                                                        <i class="fa-solid fa-key me-2 text-warning"></i> Reset Password
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item text-danger fw-bold" href="#">
-                                                        <i class="fa-solid fa-ban me-2"></i> Deactivate User
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                            <?php if ($row['status'] === 'active'): ?>
+                                                <a href="../../core/toggle_status.php?id=<?php echo $row['account_id']; ?>&current=active" class="btn btn-sm btn-light border text-danger" title="Disable Account">
+                                                    <i class="fa-solid fa-user-slash"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="../../core/toggle_status.php?id=<?php echo $row['account_id']; ?>&current=inactive" class="btn btn-sm btn-light border text-success" title="Reactivate Account">
+                                                    <i class="fa-solid fa-user-check"></i>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
 
                                         <div class="modal fade" id="resetModal<?php echo $row['account_id']; ?>" tabindex="-1">
