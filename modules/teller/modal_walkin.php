@@ -28,14 +28,36 @@
                     <label>Last Name *</label>
                     <input type="text" name="lname" class="form-control" required>
                 </div>
+                <div class="col-md-4">
+                    <label>Gender *</label>
+                    <select name="gender" class="form-select" required>
+                        <option value="" disabled selected>-- Select --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label>Civil Status</label>
+                    <select name="civil_status" class="form-select">
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Widowed">Widowed</option>
+                        <option value="Separated">Separated</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label>Date of Birth *</label>
+                    <input type="date" name="dob" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="email@example.com">
+                </div>
                 <div class="col-md-6">
                     <label>Mobile No. *</label>
                     <input type="text" name="contact" class="form-control" placeholder="09xxxxxxxxx" maxlength="11" required>
                     <small class="text-muted">Last 4 digits will be the password.</small>
-                </div>
-                <div class="col-md-6">
-                    <label>Date of Birth</label>
-                    <input type="date" name="dob" class="form-control" required>
                 </div>
             </div>
 

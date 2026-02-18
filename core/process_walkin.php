@@ -11,6 +11,9 @@ if (isset($_POST['btn_register_walkin'])) {
     $lname = trim($_POST['lname']);
     $contact = trim($_POST['contact']);
     $dob = $_POST['dob'];
+    $gender = $_POST['gender'];
+    $civil_status = $_POST['civil_status'];
+    $email = trim($_POST['email']);
     
     // 1.5 GENERATE PUBLIC ID: CUS-YYYY-XXXX
     // Check loop to ensure uniqueness
@@ -48,9 +51,9 @@ if (isset($_POST['btn_register_walkin'])) {
         $conn->begin_transaction();
 
         // A. Insert Profile
-        $sql_prof = "INSERT INTO profiles (public_id, first_name, middle_name, last_name, contact_number, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql_prof = "INSERT INTO profiles (public_id, first_name, middle_name, last_name, contact_number, date_of_birth, gender, civil_status, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql_prof);
-        $stmt->bind_param("ssssss", $public_id, $fname, $mname, $lname, $contact, $dob);
+        $stmt->bind_param("sssssssss", $public_id, $fname, $mname, $lname, $contact, $dob, $gender, $civil_status, $email);
         $stmt->execute();
         $profile_id = $conn->insert_id;
 
