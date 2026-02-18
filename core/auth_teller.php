@@ -11,6 +11,7 @@ if (isset($_POST['btn_teller_login'])) {
                 a.username, 
                 a.password, 
                 a.role, 
+                a.status,
                 a.force_change,
                 p.profile_id, 
                 p.first_name, 
@@ -28,6 +29,11 @@ if (isset($_POST['btn_teller_login'])) {
     // Allow both Hashed password AND Plain text password (for testing)
     if ($user && (password_verify($password, $user['password']) || $password === $user['password'])) {
         
+        if ($user['status'] === 'inactive') {
+            header("Location: ../teller_login.php?error=Your account is disabled. Contact the administrator.");
+            exit();
+        }
+
         if ($user['role'] === 'customer') {
             header("Location: ../teller_login.php?error=Access Denied: You do not have staff privileges.");
             exit();

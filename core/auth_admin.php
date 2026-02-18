@@ -9,7 +9,7 @@ if (isset($_POST['btn_login'])) {
     $password = $_POST['password'];
 
     // 1. Check for Admin Account
-    $sql = "SELECT account_id, password, role FROM accounts WHERE username = ? AND role = 'admin' LIMIT 1";
+    $sql = "SELECT account_id, password, role, status FROM accounts WHERE username = ? AND role = 'admin' LIMIT 1";
     
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("s", $username);
@@ -18,6 +18,11 @@ if (isset($_POST['btn_login'])) {
 
         if ($result->num_rows === 1) {
             $row = $result->fetch_assoc();
+
+            if ($row['status'] === 'inactive') {
+                header("Location: ../admin_login.php?error=Your account is disabled. Contact the administrator.");
+                exit();
+            }
 
             // 2. Verify Password (Simple check for now, use password_verify in production)
             if ($password == $row['password']) {

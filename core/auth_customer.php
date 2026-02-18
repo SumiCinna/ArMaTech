@@ -16,7 +16,7 @@ if (isset($_POST['btn_login'])) {
 
     // 2. Check Database
     // We specifically check role = 'customer' so Tellers/Admins can't log in here
-    $sql = "SELECT a.account_id, a.password, a.role, a.force_change, p.profile_id, p.first_name, p.last_name, p.public_id 
+    $sql = "SELECT a.account_id, a.password, a.role, a.status, a.force_change, p.profile_id, p.first_name, p.last_name, p.public_id 
             FROM accounts a 
             JOIN profiles p ON a.profile_id = p.profile_id 
             WHERE a.username = ? AND a.role = 'customer' 
@@ -29,6 +29,12 @@ if (isset($_POST['btn_login'])) {
 
         if ($result->num_rows === 1) {
             $row = $result->fetch_assoc();
+
+            // Check Status
+            if ($row['status'] === 'inactive') {
+                header("Location: ../customer_login.php?error=Your account is disabled. Contact the administrator.");
+                exit();
+            }
 
             // 3. Verify Password
             // Note: If you haven't hashed passwords yet, use: if ($password == $row['password']) 
