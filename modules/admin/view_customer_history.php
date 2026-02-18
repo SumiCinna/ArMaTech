@@ -169,9 +169,9 @@ while ($row = $transactions->fetch_assoc()) {
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-light text-primary border" title="View Full Details">
+                                                <a href="view_transaction_details.php?id=<?php echo $row['transaction_id']; ?>" class="btn btn-sm btn-light text-primary border" title="View Full Details">
                                                     <i class="fa-solid fa-eye"></i>
-                                                </button>
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

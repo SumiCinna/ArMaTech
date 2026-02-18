@@ -17,31 +17,59 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
     <title>Admin Dashboard | ArMaTech</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f4f6f9; overflow-x: hidden; }
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         
         /* Sidebar Styling */
         #sidebar-wrapper {
             min-height: 100vh;
-            width: 250px;
-            margin-left: -250px;
+            width: 260px;
+            margin-left: -260px;
             transition: margin 0.25s ease-out;
-            background: #343a40;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             position: fixed;
             top: 0; bottom: 0; z-index: 1000;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
         }
         #sidebar-wrapper.toggled { margin-left: 0; }
         #page-content-wrapper { width: 100%; transition: margin 0.25s ease-out; margin-left: 0; }
         @media (min-width: 768px) {
             #sidebar-wrapper { margin-left: 0; }
-            #page-content-wrapper { margin-left: 250px; }
+            #page-content-wrapper { margin-left: 260px; }
         }
 
-        .sidebar-heading { padding: 1.5rem 1.25rem; font-size: 1.2rem; color: #fff; font-weight: bold; background: #212529; }
-        .list-group-item { background: transparent; color: #adb5bd; border: none; padding: 15px 20px; }
-        .list-group-item:hover { background: #495057; color: #fff; }
-        .list-group-item.active { background: #0d6efd; color: #fff; font-weight: bold; }
-        .list-group-item i { width: 25px; }
+        .sidebar-heading { 
+            padding: 1.5rem 1.5rem; 
+            font-size: 1.25rem; 
+            color: #fff; 
+            font-weight: 800; 
+            background: rgba(255,255,255,0.03); 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            letter-spacing: -0.5px;
+        }
+        
+        .list-group-item { 
+            background: transparent; 
+            color: #94a3b8; 
+            border: none; 
+            padding: 16px 24px; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        .list-group-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: #f8fafc; 
+            padding-left: 28px;
+        }
+        .list-group-item.active { 
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%); 
+            color: #60a5fa; 
+            border-left-color: #60a5fa;
+            font-weight: 700;
+        }
+        .list-group-item i { width: 24px; text-align: center; margin-right: 10px; }
 
         /* Dashboard Cards */
         .admin-card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
@@ -52,7 +80,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
 
 <div class="d-flex" id="wrapper">
     <div class="border-end" id="sidebar-wrapper">
-        <div class="sidebar-heading"><i class="fa-solid fa-gem me-2"></i> ArMaTech <small class="d-block fs-6 fw-normal opacity-50">Admin Panel</small></div>
+        <div class="sidebar-heading"><i class="fa-solid fa-laptop me-2"></i> ArMaTech <small class="d-block fs-6 fw-normal opacity-50">Admin Panel</small></div>
         <div class="list-group list-group-flush mt-3">
             <a href="dashboard.php" class="list-group-item <?php echo ($activePage == 'dashboard') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-gauge-high"></i> Dashboard
@@ -85,7 +113,7 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
     </div>
 
     <div id="page-content-wrapper">
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
             <button class="btn btn-outline-secondary d-md-none" id="menu-toggle"><i class="fa-solid fa-bars"></i></button>
             <span class="ms-auto fw-bold text-secondary">Hello, Administrator</span>
         </nav>
