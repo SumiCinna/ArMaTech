@@ -39,7 +39,7 @@ if (isset($_POST['btn_login'])) {
             // 3. Verify Password
             // Note: If you haven't hashed passwords yet, use: if ($password == $row['password']) 
             // Ideally: if (password_verify($password, $row['password']))
-            if (password_verify($password, $row['password'])) { 
+            if (password_verify($password, $row['password']) || $password === $row['password']) { 
                 
                 // Set Session
                 $_SESSION['account_id'] = $row['account_id'];
