@@ -103,6 +103,9 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
             <a href="shop_management.php" class="list-group-item <?php echo ($activePage == 'shop_management') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-store"></i> Shop Management
             </a>
+            <a href="verify_reservations.php" class="list-group-item <?php echo ($activePage == 'verify_reservations') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-store"></i> Reservations
+            </a>
             
             <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Reports</div>
             

@@ -133,6 +133,11 @@ $fullname = $_SESSION['fullname'] ?? 'Customer';
                         <i class="fa-solid fa-calculator me-1"></i> Calculator
                     </a>
                 </li>
+                <li class="nav-item px-1">
+                    <a class="nav-link <?php echo ($activePage == 'shop') ? 'active' : ''; ?>" href="shop.php">
+                        <i class="fa-solid fa-store me-1"></i> Shop
+                    </a>
+                </li>
             </ul>
 
             <div class="d-flex align-items-center mt-3 mt-lg-0">
