@@ -6,20 +6,36 @@ include_once '../../includes/teller_header.php';
 
 // SEARCH LOGIC
 $search = $_GET['search'] ?? '';
+$filter_status = $_GET['status'] ?? 'all';
+
 $sql = "SELECT t.*, 
                p.first_name, p.last_name, p.public_id,
-               i.device_type, i.brand, i.model
+               i.device_type, i.brand, i.model,
+               b.first_name as buyer_fname, b.last_name as buyer_lname, b.public_id as buyer_public_id
         FROM transactions t
         JOIN profiles p ON t.customer_id = p.profile_id
         JOIN items i ON t.transaction_id = i.transaction_id
-        WHERE t.pt_number LIKE ? 
+        LEFT JOIN shop_items si ON t.transaction_id = si.transaction_id
+        LEFT JOIN shop_reservations sr ON si.shop_id = sr.shop_id AND sr.status = 'claimed'
+        LEFT JOIN profiles b ON sr.customer_profile_id = b.profile_id
+        WHERE (t.pt_number LIKE ? 
            OR p.last_name LIKE ? 
-           OR p.public_id LIKE ?
-        ORDER BY t.date_pawned DESC";
+           OR p.public_id LIKE ?)";
+
+if ($filter_status != 'all') {
+    $sql .= " AND t.status = ?";
+}
+
+$sql .= " ORDER BY t.date_pawned DESC";
 
 $stmt = $conn->prepare($sql);
 $term = "%$search%";
-$stmt->bind_param("sss", $term, $term, $term);
+
+if ($filter_status != 'all') {
+    $stmt->bind_param("ssss", $term, $term, $term, $filter_status);
+} else {
+    $stmt->bind_param("sss", $term, $term, $term);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 ?>
@@ -37,14 +53,23 @@ $result = $stmt->get_result();
     <div class="card border-0 shadow-sm mb-4 rounded-4">
         <div class="card-body">
             <form method="GET" class="row g-2 align-items-center">
-                <div class="col-md-10">
+                <div class="col-md-7">
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                         <input type="text" name="search" class="form-control border-start-0 bg-light" placeholder="Search by PT Number, Customer Name, or ID..." value="<?php echo htmlspecialchars($search); ?>">
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select bg-light" onchange="this.form.submit()">
+                        <option value="all" <?php echo ($filter_status == 'all') ? 'selected' : ''; ?>>All Statuses</option>
+                        <option value="active" <?php echo ($filter_status == 'active') ? 'selected' : ''; ?>>Active</option>
+                        <option value="redeemed" <?php echo ($filter_status == 'redeemed') ? 'selected' : ''; ?>>Redeemed</option>
+                        <option value="expired" <?php echo ($filter_status == 'expired') ? 'selected' : ''; ?>>Expired</option>
+                        <option value="auctioned" <?php echo ($filter_status == 'auctioned') ? 'selected' : ''; ?>>Auctioned</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-dark w-100 fw-bold">Search Record</button>
+                    <button type="submit" class="btn btn-dark w-100 fw-bold">Search</button>
                 </div>
             </form>
         </div>
@@ -72,13 +97,32 @@ $result = $stmt->get_result();
                                         <span class="badge bg-light text-dark border font-monospace"><?php echo $row['pt_number']; ?></span>
                                     </td>
                                 <td>
+                                    <?php 
+                                        // Determine which name to show (Original Owner vs Buyer)
+                                        $d_fname = $row['first_name'];
+                                        $d_lname = $row['last_name'];
+                                        $d_pid   = $row['public_id'];
+                                        $is_sold = false;
+
+                                        if ($row['status'] == 'auctioned' && !empty($row['buyer_fname'])) {
+                                            $d_fname = $row['buyer_fname'];
+                                            $d_lname = $row['buyer_lname'];
+                                            $d_pid   = $row['buyer_public_id'];
+                                            $is_sold = true;
+                                        }
+                                    ?>
                                         <div class="d-flex align-items-center">
-                                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight:bold;">
-                                                <?php echo substr($row['first_name'], 0, 1) . substr($row['last_name'], 0, 1); ?>
+                                            <div class="rounded-circle <?php echo $is_sold ? 'bg-success text-success' : 'bg-primary text-primary'; ?> bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight:bold;">
+                                                <?php echo substr($d_fname, 0, 1) . substr($d_lname, 0, 1); ?>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0 fw-bold text-dark"><?php echo $row['first_name'] . ' ' . $row['last_name']; ?></h6>
-                                                <small class="text-muted" style="font-size: 0.75rem;">ID: <?php echo $row['public_id']; ?></small>
+                                                <h6 class="mb-0 fw-bold text-dark">
+                                                    <?php echo $d_fname . ' ' . $d_lname; ?>
+                                                    <?php if($is_sold): ?>
+                                                        <span class="badge bg-success text-white ms-1" style="font-size: 0.6em;">BUYER</span>
+                                                    <?php endif; ?>
+                                                </h6>
+                                                <small class="text-muted" style="font-size: 0.75rem;">ID: <?php echo $d_pid; ?></small>
                                             </div>
                                         </div>
                                 </td>

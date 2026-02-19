@@ -13,16 +13,20 @@ $payment_id = $_GET['payment_id'];
 // 2. FETCH DATA (Join Payment + Transaction + Customer + Teller)
 // We join 4 tables here to get the complete picture
 $sql = "SELECT p.*, 
-               t.pt_number, t.maturity_date AS current_maturity,
+               t.pt_number, t.maturity_date AS current_maturity, t.status AS transaction_status,
                c.first_name AS cust_fname, c.last_name AS cust_lname, c.public_id AS cust_id,
                tp.public_id AS teller_public_id,
-               i.brand, i.model, i.device_type, i.serial_number
+               i.brand, i.model, i.device_type, i.serial_number,
+               b.first_name AS buyer_fname, b.last_name AS buyer_lname, b.public_id AS buyer_id
         FROM payments p
         JOIN transactions t ON p.transaction_id = t.transaction_id
         JOIN items i ON t.transaction_id = i.transaction_id
         JOIN profiles c ON t.customer_id = c.profile_id
         JOIN accounts a_teller ON p.teller_id = a_teller.account_id
         JOIN profiles tp ON a_teller.profile_id = tp.profile_id
+        LEFT JOIN shop_items si ON t.transaction_id = si.transaction_id
+        LEFT JOIN shop_reservations sr ON si.shop_id = sr.shop_id AND sr.status = 'claimed'
+        LEFT JOIN profiles b ON sr.customer_profile_id = b.profile_id
         WHERE p.payment_id = ?";
 
 $stmt = $conn->prepare($sql);
@@ -54,6 +58,20 @@ switch ($data['payment_type']) {
         $type_label = "FULL REDEMPTION"; 
         $type_class = "bg-success text-white";
         break;
+}
+
+// Default: Show Original Customer
+$display_fname = $data['cust_fname'];
+$display_lname = $data['cust_lname'];
+$display_id    = $data['cust_id'];
+
+// Logic: If item was SOLD (Auctioned) and this is the sale receipt, show BUYER
+if ($data['transaction_status'] == 'auctioned' && !empty($data['buyer_id']) && $data['payment_type'] == 'full_redemption') {
+    $display_fname = $data['buyer_fname'];
+    $display_lname = $data['buyer_lname'];
+    $display_id    = $data['buyer_id'];
+    $type_label    = "AUCTION SALE";
+    $type_class    = "bg-dark text-white";
 }
 ?>
 
@@ -251,8 +269,8 @@ switch ($data['payment_type']) {
             <div class="info-group">
                 <div class="info-label">Customer</div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="info-value"><?php echo $data['cust_fname'] . ' ' . $data['cust_lname']; ?></div>
-                    <span class="badge bg-light text-dark border"><?php echo $data['cust_id']; ?></span>
+                    <div class="info-value"><?php echo $display_fname . ' ' . $display_lname; ?></div>
+                    <span class="badge bg-light text-dark border"><?php echo $display_id; ?></span>
                 </div>
             </div>
 
