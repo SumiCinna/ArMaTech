@@ -31,9 +31,14 @@ $result = $conn->query($sql);
         </div>
     <?php endif; ?>
 
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <h5 class="fw-bold text-dark mb-0">Recently Added</h5>
-        <span class="text-muted small"><?php echo $result->num_rows; ?> Items Available</span>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold text-dark mb-0">Recently Added</h5>
+            <span class="text-muted small"><?php echo $result->num_rows; ?> Items Available</span>
+        </div>
+        <a href="my_reservations.php" class="btn btn-outline-success fw-bold rounded-pill">
+            <i class="fa-solid fa-bag-shopping me-2"></i> My Reservations
+        </a>
     </div>
 
     <div class="row g-4">
