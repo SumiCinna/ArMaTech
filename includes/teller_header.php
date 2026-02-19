@@ -1,5 +1,7 @@
 <?php
-// includes/teller_header.php
+require_once '../../config/database.php';
+require_once '../../core/auto_expire.php'; 
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

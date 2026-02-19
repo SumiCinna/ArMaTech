@@ -1,5 +1,7 @@
 <?php
-// includes/admin_header.php
+require_once '../../config/database.php';
+require_once '../../core/auto_expire.php';
+
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 // SECURITY CHECK
@@ -94,6 +96,12 @@ $activePage = basename($_SERVER['PHP_SELF'], ".php");
             </a>
             <a href="manage_customers.php" class="list-group-item <?php echo ($activePage == 'manage_customers') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-users"></i> Customers
+            </a>
+            <a href="ready_for_sale.php" class="list-group-item <?php echo ($activePage == 'ready_for_sale') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-tags"></i> Ready for Sale
+            </a>
+            <a href="shop_management.php" class="list-group-item <?php echo ($activePage == 'shop_management') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-store"></i> Shop Management
             </a>
             
             <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Reports</div>
