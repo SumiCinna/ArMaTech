@@ -1,11 +1,16 @@
-<footer class="mt-auto py-3 bg-white border-top">
-    <div class="container text-center text-muted">
-        <small>
-            ArMaTech Pawnshop System &copy; <?php echo date('Y'); ?> <br>
-            <span class="text-success"><i class="fa-solid fa-wifi"></i> System Online</span>
-        </small>
-    </div>
-</footer>
+    </div> <!-- End container-fluid -->
+
+    <footer class="mt-auto py-3 bg-white border-top">
+        <div class="container text-center text-muted">
+            <small>
+                ArMaTech Pawnshop System &copy; <?php echo date('Y'); ?> <br>
+                <span class="text-success"><i class="fa-solid fa-wifi"></i> System Online</span>
+            </small>
+        </div>
+    </footer>
+
+    </div> <!-- End page-content-wrapper -->
+</div> <!-- End wrapper -->
 
 <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -34,6 +39,16 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+    // Sidebar Toggle Script
+    var el = document.getElementById("wrapper");
+    var toggleButton = document.getElementById("menu-toggle");
+
+    if (toggleButton) {
+        toggleButton.onclick = function () {
+            el.classList.toggle("toggled");
+        };
+    }
+
     document.addEventListener('keydown', function(event) {
         // Alt + N = New Pawn
         if (event.altKey && event.key === 'n') {

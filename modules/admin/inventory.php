@@ -33,7 +33,8 @@ $result = $conn->query($sql);
 $stats_sql = "SELECT 
                 COUNT(CASE WHEN status = 'active' THEN 1 END) as active_count,
                 COUNT(CASE WHEN status = 'expired' THEN 1 END) as expired_count,
-                COUNT(CASE WHEN status = 'redeemed' THEN 1 END) as redeemed_count
+                COUNT(CASE WHEN status = 'redeemed' THEN 1 END) as redeemed_count,
+                COUNT(CASE WHEN status = 'auctioned' THEN 1 END) as auctioned_count
               FROM transactions";
 $stats = $conn->query($stats_sql)->fetch_assoc();
 ?>
@@ -51,7 +52,7 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm p-3 border-start border-4 border-success h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -63,7 +64,7 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm p-3 border-start border-4 border-danger h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -75,7 +76,7 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm p-3 border-start border-4 border-secondary h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -84,6 +85,18 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                         <small class="text-muted"><i class="fa-solid fa-rotate-left me-1"></i> Returned to Owner</small>
                     </div>
                     <i class="fa-solid fa-box-open fa-2x text-secondary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold">Auctioned / Sold</small>
+                        <h2 class="fw-bold mb-0 text-primary"><?php echo $stats['auctioned_count']; ?></h2>
+                        <small class="text-primary"><i class="fa-solid fa-gavel me-1"></i> Sold to Public</small>
+                    </div>
+                    <i class="fa-solid fa-hand-holding-dollar fa-2x text-primary opacity-25"></i>
                 </div>
             </div>
         </div>
@@ -98,6 +111,7 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                         <option value="all" <?php echo ($filter_status == 'all') ? 'selected' : ''; ?>>All Statuses</option>
                         <option value="active" <?php echo ($filter_status == 'active') ? 'selected' : ''; ?>>Active (In Vault)</option>
                         <option value="expired" <?php echo ($filter_status == 'expired') ? 'selected' : ''; ?>>Expired (Foreclosed)</option>
+                        <option value="auctioned" <?php echo ($filter_status == 'auctioned') ? 'selected' : ''; ?>>Auctioned (Sold)</option>
                         <option value="redeemed" <?php echo ($filter_status == 'redeemed') ? 'selected' : ''; ?>>Redeemed (Returned)</option>
                     </select>
                 </div>
@@ -178,6 +192,8 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                                             <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">In Vault</span>
                                         <?php elseif($row['status'] == 'expired'): ?>
                                             <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Foreclosed</span>
+                                        <?php elseif($row['status'] == 'auctioned'): ?>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">Auctioned</span>
                                         <?php else: ?>
                                             <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3">Redeemed</span>
                                         <?php endif; ?>

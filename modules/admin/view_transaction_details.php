@@ -48,8 +48,9 @@ $payments = $stmt_p->get_result();
 // Status Badge Logic
 $status_color = 'secondary';
 if ($t['status'] == 'active') $status_color = 'success';
-if ($t['status'] == 'redeemed') $status_color = 'primary';
+if ($t['status'] == 'redeemed') $status_color = 'secondary';
 if ($t['status'] == 'expired') $status_color = 'danger';
+if ($t['status'] == 'auctioned') $status_color = 'primary';
 ?>
 
 <div class="container-fluid px-4">
@@ -131,7 +132,7 @@ if ($t['status'] == 'expired') $status_color = 'danger';
                                             <td>
                                                 <?php if($pay['payment_type'] == 'interest_only'): ?>
                                                     <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-3">Interest Payment</span>
-                                                <?php elseif($pay['payment_type'] == 'redeem'): ?>
+                                                <?php elseif($pay['payment_type'] == 'redeem' || $pay['payment_type'] == 'full_redemption'): ?>
                                                     <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">Full Redemption</span>
                                                 <?php else: ?>
                                                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-3">Payment</span>

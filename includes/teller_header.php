@@ -44,103 +44,111 @@ $fullname = $_SESSION['full_name'] ?? 'Teller';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <style>
-        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         
-        /* Modern Navbar */
-        .navbar { 
-            background-color: #0f172a; 
-            padding-top: 1rem; 
-            padding-bottom: 1rem;
+        /* Sidebar Styling */
+        #sidebar-wrapper {
+            min-height: 100vh;
+            width: 260px;
+            margin-left: -260px;
+            transition: margin 0.25s ease-out;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            position: fixed;
+            top: 0; bottom: 0; z-index: 1000;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
         }
-        .navbar-brand { 
-            font-weight: 800; 
-            letter-spacing: -0.5px; 
-            font-size: 1.5rem;
-        }
-        
-        .nav-link {
-            color: rgba(255,255,255,0.7) !important;
-            font-weight: 500;
-            padding: 0.5rem 1rem !important;
-            transition: all 0.2s;
-            border-radius: 50px;
-        }
-        .nav-link:hover {
-            color: #fff !important;
-            background: rgba(255,255,255,0.1);
-        }
-        .nav-link.active {
-            color: #fff !important;
-            background: rgba(255,255,255,0.15);
-            font-weight: 600;
+        #sidebar-wrapper.toggled { margin-left: 0; }
+        #page-content-wrapper { width: 100%; transition: margin 0.25s ease-out; margin-left: 0; display: flex; flex-direction: column; min-height: 100vh; }
+        @media (min-width: 768px) {
+            #sidebar-wrapper { margin-left: 0; }
+            #page-content-wrapper { margin-left: 260px; }
         }
 
-        /* User Dropdown */
-        .user-dropdown .dropdown-toggle {
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 5px 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50px;
-            transition: background 0.2s;
+        .sidebar-heading { 
+            padding: 1.5rem 1.5rem; 
+            font-size: 1.25rem; 
+            color: #fff; 
+            font-weight: 800; 
+            background: rgba(255,255,255,0.03); 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            letter-spacing: -0.5px;
         }
-        .user-dropdown .dropdown-toggle:hover {
-            background: rgba(255,255,255,0.2);
+        
+        .list-group-item { 
+            background: transparent; 
+            color: rgba(255, 255, 255, 0.8); 
+            border: none; 
+            padding: 16px 24px; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
         }
+        .list-group-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: #f8fafc; 
+            padding-left: 28px;
+        }
+        .list-group-item.active { 
+            background: linear-gradient(90deg, rgba(13, 202, 240, 0.15) 0%, transparent 100%); 
+            color: #0dcaf0; 
+            border-left-color: #0dcaf0;
+            font-weight: 700;
+        }
+        .list-group-item i { width: 24px; text-align: center; margin-right: 10px; }
+        .sidebar-label { color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="dashboard.php">
-        <i class="bi bi-shop-window me-2 text-info"></i> ArMaTech <small class="opacity-50 fw-normal" style="font-size: 0.6em; letter-spacing: 1px;">TELLER PORTAL</small>
-    </a>
-    
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#tellerNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="tellerNav">
-      <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-        <li class="nav-item px-1">
-            <a class="nav-link <?php echo ($activePage == 'dashboard') ? 'active' : ''; ?>" href="dashboard.php"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
-        </li>
-        <li class="nav-item px-1">
-            <a class="nav-link <?php echo ($activePage == 'new_pawn') ? 'active' : ''; ?>" href="new_pawn.php"><i class="bi bi-plus-circle me-1"></i> New Pawn</a>
-        </li>
-        <li class="nav-item px-1">
-            <a class="nav-link <?php echo ($activePage == 'redeem') ? 'active' : ''; ?>" href="redeem.php"><i class="bi bi-cash-stack me-1"></i> Redeem/Renew</a>
-        </li>
-        <li class="nav-item px-1">
-            <a class="nav-link <?php echo ($activePage == 'transactions') ? 'active' : ''; ?>" href="transactions.php"><i class="bi bi-file-earmark-text me-1"></i> Transactions</a>
-        </li>
-      </ul>
-      
-      <div class="d-flex align-items-center mt-3 mt-lg-0">
-        <div class="dropdown user-dropdown">
-            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
-                <div class="rounded-circle bg-info d-flex align-items-center justify-content-center text-dark fw-bold me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
-                    <?php echo substr($fullname, 0, 1); ?>
-                </div>
-                <span class="small fw-bold me-1"><?php echo $fullname; ?></span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 rounded-3 overflow-hidden">
-                <li><h6 class="dropdown-header text-uppercase small fw-bold">Staff Account</h6></li>
-                <li><a class="dropdown-item py-2" href="profile.php"><i class="bi bi-person-gear me-2 text-muted"></i> My Profile</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <a class="dropdown-item py-2 text-danger fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                        <i class="bi bi-power me-2"></i> Logout
-                    </a>
-                </li>
-            </ul>
+<div class="d-flex" id="wrapper">
+    <!-- Sidebar -->
+    <div class="border-end" id="sidebar-wrapper">
+        <div class="sidebar-heading">
+            <i class="bi bi-shop-window me-2 text-info"></i> ArMaTech 
+            <small class="d-block fs-6 fw-normal opacity-50">Teller Portal</small>
         </div>
-      </div>
+        <div class="list-group list-group-flush mt-3">
+            <a href="dashboard.php" class="list-group-item <?php echo ($activePage == 'dashboard') ? 'active' : ''; ?>">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            
+            <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Operations</div>
+            
+            <a href="new_pawn.php" class="list-group-item <?php echo ($activePage == 'new_pawn') ? 'active' : ''; ?>">
+                <i class="bi bi-plus-circle"></i> New Pawn
+            </a>
+            <a href="redeem.php" class="list-group-item <?php echo ($activePage == 'redeem') ? 'active' : ''; ?>">
+                <i class="bi bi-cash-stack"></i> Redeem/Renew
+            </a>
+            <a href="transactions.php" class="list-group-item <?php echo ($activePage == 'transactions') ? 'active' : ''; ?>">
+                <i class="bi bi-file-earmark-text"></i> Transactions
+            </a>
+            <a href="claim_reservation.php" class="list-group-item <?php echo ($activePage == 'claim_reservation') ? 'active' : ''; ?>">
+                <i class="bi bi-box-seam"></i> Claim Reservations
+            </a>
+
+            <div class="sidebar-label text-uppercase fw-bold px-4 mt-3 mb-2">Account</div>
+            
+            <a href="profile.php" class="list-group-item <?php echo ($activePage == 'profile') ? 'active' : ''; ?>">
+                <i class="bi bi-person-gear"></i> My Profile
+            </a>
+            
+            <div class="mt-5 px-3">
+                <button type="button" class="btn btn-danger w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="bi bi-power me-2"></i> Logout
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
-</nav>
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+            <button class="btn btn-outline-secondary d-md-none" id="menu-toggle"><i class="bi bi-list"></i></button>
+            <span class="ms-auto fw-bold text-secondary">Hello, <?php echo $fullname; ?></span>
+        </nav>
+        
+        <div class="container-fluid px-4 py-4 flex-grow-1">
