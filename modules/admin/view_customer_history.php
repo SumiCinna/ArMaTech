@@ -30,16 +30,37 @@ if (!$customer) {
 }
 
 // 3. FETCH TRANSACTIONS
-$sql_trans = "SELECT t.*, i.device_type, i.brand, i.model 
+$sql_trans = "SELECT 
+                t.transaction_id, t.pt_number, t.date_pawned, t.status, t.principal_amount,
+                i.device_type, i.brand, i.model,
+                'owner' as relation, 0.00 as purchase_price,
+                b.first_name as buyer_fname, b.last_name as buyer_lname
               FROM transactions t
               JOIN items i ON t.transaction_id = i.transaction_id
-              WHERE t.customer_id = ? 
-              ORDER BY t.date_pawned DESC";
+              LEFT JOIN shop_items si ON t.transaction_id = si.transaction_id
+              LEFT JOIN shop_reservations sr ON si.shop_id = sr.shop_id AND sr.status = 'claimed'
+              LEFT JOIN profiles b ON sr.customer_profile_id = b.profile_id
+              WHERE t.customer_id = ?
+
+              UNION ALL
+
+              SELECT 
+                t.transaction_id, t.pt_number, sr.created_at as date_pawned, 'purchased' as status, t.principal_amount,
+                i.device_type, i.brand, i.model,
+                'buyer' as relation, si.selling_price as purchase_price,
+                NULL as buyer_fname, NULL as buyer_lname
+              FROM shop_reservations sr
+              JOIN shop_items si ON sr.shop_id = si.shop_id
+              JOIN transactions t ON si.transaction_id = t.transaction_id
+              JOIN items i ON t.transaction_id = i.transaction_id
+              WHERE sr.customer_profile_id = ? AND sr.status = 'claimed'
+
+              ORDER BY date_pawned DESC";
 // Note: transactions table uses profile_id (customer_id), so we need that ID, not account_id
 $customer_profile_id = $customer['profile_id'];
 
 $stmt_t = $conn->prepare($sql_trans);
-$stmt_t->bind_param("i", $customer_profile_id);
+$stmt_t->bind_param("ii", $customer_profile_id, $customer_profile_id);
 $stmt_t->execute();
 $transactions = $stmt_t->get_result();
 
@@ -135,7 +156,7 @@ while ($row = $transactions->fetch_assoc()) {
                                     <th class="ps-4">Date</th>
                                     <th>PT Number</th>
                                     <th>Item Details</th>
-                                    <th>Principal</th>
+                                    <th>Amount</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -156,17 +177,26 @@ while ($row = $transactions->fetch_assoc()) {
                                                     <small class="text-muted"><?php echo $row['device_type']; ?></small>
                                                 </div>
                                             </td>
-                                            <td class="fw-bold text-dark">₱<?php echo number_format($row['principal_amount'], 2); ?></td>
+                                            <td class="fw-bold text-dark">
+                                                ₱<?php echo ($row['relation'] == 'buyer') ? number_format($row['purchase_price'], 2) : number_format($row['principal_amount'], 2); ?>
+                                            </td>
                                             <td>
                                                 <?php 
                                                     $status_color = 'secondary';
                                                     if ($row['status'] == 'active') $status_color = 'success';
                                                     if ($row['status'] == 'redeemed') $status_color = 'primary';
                                                     if ($row['status'] == 'expired') $status_color = 'danger';
+                                                    if ($row['status'] == 'auctioned') $status_color = 'dark';
+                                                    if ($row['status'] == 'purchased') $status_color = 'info';
                                                 ?>
                                                 <span class="badge bg-<?php echo $status_color; ?> bg-opacity-10 text-<?php echo $status_color; ?> rounded-pill px-3">
-                                                    <?php echo ucfirst($row['status']); ?>
+                                                    <?php echo ($row['status'] == 'purchased') ? 'Purchased (Auction)' : ucfirst($row['status']); ?>
                                                 </span>
+                                                <?php if ($row['status'] == 'auctioned' && !empty($row['buyer_fname'])): ?>
+                                                    <div class="small text-muted mt-1" style="font-size: 0.7rem;">
+                                                        <i class="fa-solid fa-gavel me-1"></i> Sold to <?php echo $row['buyer_fname']; ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <a href="view_transaction_details.php?id=<?php echo $row['transaction_id']; ?>" class="btn btn-sm btn-light text-primary border" title="View Full Details">

@@ -16,11 +16,15 @@ $trans_id = intval($_GET['id']);
 $sql = "SELECT t.*, 
                i.device_type, i.brand, i.model, i.serial_number, i.inclusions, i.condition_notes,
                p.first_name, p.last_name, p.contact_number, p.email, p.public_id as cust_public_id,
-               a.username as processed_by_user
+               a.username as processed_by_user,
+               b.first_name as buyer_fname, b.last_name as buyer_lname, b.contact_number as buyer_contact, b.public_id as buyer_public_id
         FROM transactions t
         JOIN items i ON t.transaction_id = i.transaction_id
         JOIN profiles p ON t.customer_id = p.profile_id
         LEFT JOIN accounts a ON t.teller_id = a.account_id
+        LEFT JOIN shop_items si ON t.transaction_id = si.transaction_id
+        LEFT JOIN shop_reservations sr ON si.shop_id = sr.shop_id AND sr.status = 'claimed'
+        LEFT JOIN profiles b ON sr.customer_profile_id = b.profile_id
         WHERE t.transaction_id = ?";
 
 $stmt = $conn->prepare($sql);
@@ -196,9 +200,27 @@ if ($t['status'] == 'auctioned') $status_color = 'primary';
                 </div>
             </div>
 
+            <?php if ($t['status'] == 'auctioned' && !empty($t['buyer_fname'])): ?>
+            <div class="card shadow-sm border-0 mb-4 border-start border-4 border-success">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-success"><i class="fa-solid fa-gavel me-2"></i> Auction Winner</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                         <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 60px; height: 60px; font-weight:bold; font-size: 1.2rem;">
+                            <?php echo substr($t['buyer_fname'], 0, 1) . substr($t['buyer_lname'], 0, 1); ?>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold mb-1 text-dark"><?php echo $t['buyer_fname'] . ' ' . $t['buyer_lname']; ?></h6>
+                    <p class="text-muted small mb-2"><span class="badge bg-light text-dark border">ID: <?php echo $t['buyer_public_id']; ?></span></p>
+                    <small class="text-muted"><i class="fa-solid fa-phone me-1"></i> <?php echo $t['buyer_contact']; ?></small>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold"><i class="fa-solid fa-user me-2"></i> Customer Details</h6>
+                    <h6 class="mb-0 fw-bold"><i class="fa-solid fa-user me-2"></i> <?php echo ($t['status'] == 'auctioned') ? 'Previous Owner' : 'Customer Details'; ?></h6>
                 </div>
                 <div class="card-body text-center">
                     <div class="mb-3">
