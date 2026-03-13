@@ -9,8 +9,8 @@ if (!isset($_GET['id'])) header("Location: redeem.php");
 
 $id = $_GET['id'];
 
-// 1. Fetch Data
-$sql = "SELECT t.*, p.first_name, p.last_name, p.public_id, i.brand, i.model, i.condition_notes 
+// 1. Fetch Data (Added last_renewed_date to the SELECT query)
+$sql = "SELECT t.*, t.last_renewed_date, p.first_name, p.last_name, p.public_id, i.brand, i.model, i.condition_notes 
         FROM transactions t
         JOIN profiles p ON t.customer_id = p.profile_id
         JOIN items i ON t.transaction_id = i.transaction_id
@@ -22,8 +22,8 @@ $t = $stmt->get_result()->fetch_assoc();
 
 if (!$t) die("Transaction not found.");
 
-// 2. Calculate Values
-$calc = calculatePawnInterest($t['principal_amount'], $t['date_pawned']);
+// 2. Calculate Values (Now passing the last_renewed_date!)
+$calc = calculatePawnInterest($t['principal_amount'], $t['last_renewed_date']);
 $principal      = $t['principal_amount'];
 $interest_due   = $calc['interest'];
 $total_full_pay = $calc['total']; 
@@ -138,6 +138,51 @@ $total_full_pay = $calc['total'];
                         <p class="mb-0 small fst-italic text-white-50">
                             "<?php echo empty($t['condition_notes']) ? 'No remarks.' : nl2br($t['condition_notes']); ?>"
                         </p>
+                    </div>
+
+                    <!-- Interest Breakdown -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-white-50 text-uppercase fw-bold ls-1">Interest Breakdown (3%)</small>
+                            <span class="badge bg-white bg-opacity-25 border border-white border-opacity-25 text-white"><?php echo $calc['months']; ?> Months</span>
+                        </div>
+                        <div class="rounded-3 overflow-hidden border border-white border-opacity-25" style="background-color: rgba(0, 0, 0, 0.4);">
+                            <div style="max-height: 160px; overflow-y: auto;">
+                                <div class="d-flex flex-column w-100">
+                                    <?php 
+                                        $breakdown_date = new DateTime($t['last_renewed_date']);
+                                        $monthly_amt = $principal * 0.03;
+                                        for($m = 1; $m <= $calc['months']; $m++):
+                                            $p_start = $breakdown_date->format('M d, Y');
+                                            $breakdown_date->modify('+30 days');
+                                            $p_end = $breakdown_date->format('M d, Y');
+                                    ?>
+                                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-white border-opacity-10">
+                                        <div class="fw-medium" style="color: #f8fafc; font-size: 0.85em;">
+                                            <i class="fa-regular fa-calendar-days me-2" style="color: #94a3b8;"></i><?php echo $p_start . ' to ' . $p_end; ?>
+                                        </div>
+                                        <div class="fw-bold" style="color: #fbbf24; font-size: 0.9em;">
+                                            + ₱<?php echo number_format($monthly_amt, 2); ?>
+                                        </div>
+                                    </div>
+                                    <?php endfor; ?>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-black bg-opacity-50">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-white-50 small">Total Interest</span>
+                                    <span class="text-warning fw-bold small">₱<?php echo number_format($interest_due, 2); ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-white-50 small">Principal Amount</span>
+                                    <span class="text-success fw-bold small">₱<?php echo number_format($principal, 2); ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-white border-opacity-10">
+                                    <span class="text-white fw-bold text-uppercase" style="font-size: 0.85em;">Total Redemption</span>
+                                    <span class="text-white fw-bold">₱<?php echo number_format($total_full_pay, 2); ?></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

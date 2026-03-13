@@ -10,17 +10,16 @@
  * 4. Any fraction of a month is counted as a full month.
  *
  * @param float $principal The loan amount (e.g. 10000)
- * @param string $date_pawned The date string (Y-m-d H:i:s)
+ * @param string $last_renewed_date The date string (Y-m-d H:i:s)
  * @return array The calculation breakdown
  */
-function calculatePawnInterest($principal, $date_pawned) {
+function calculatePawnInterest($principal, $last_renewed_date) {
     
     // 1. SETTINGS
     $monthly_rate = 0.03; // 3% Interest
     
     // 2. CALCULATE DAYS ELAPSED
-    // We use DateTime objects for accurate calculation
-    $start_date = new DateTime($date_pawned);
+    $start_date = new DateTime($last_renewed_date);
     $current_date = new DateTime(); // NOW
     
     // Calculate the difference
@@ -29,12 +28,8 @@ function calculatePawnInterest($principal, $date_pawned) {
 
     // 3. THE LOGIC: "Fraction of a month is a full month"
     if ($days_elapsed == 0) {
-        // If they redeem on the SAME DAY, charge 1 month minimum
         $months_to_pay = 1;
     } else {
-        // Divide days by 30 and round UP (ceil)
-        // Example: 31 days / 30 = 1.03 -> ceil -> 2 Months
-        // Example: 25 days / 30 = 0.83 -> ceil -> 1 Month
         $months_to_pay = ceil($days_elapsed / 30);
     }
 
@@ -42,9 +37,7 @@ function calculatePawnInterest($principal, $date_pawned) {
     $interest_amount = $principal * $monthly_rate * $months_to_pay;
     $total_due = $principal + $interest_amount;
 
-    // 5. PENALTY CHECK (Optional - Logic for Expired Items)
-    // If item is expired (over 120 days), some shops add a penalty. 
-    // For now, we'll keep it simple (No Penalty).
+    // 5. PENALTY CHECK
     $penalty = 0;
 
     // 6. RETURN DATA

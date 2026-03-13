@@ -32,16 +32,18 @@ if (isset($_POST['btn_process_payment'])) {
         $new_principal = $old_principal; // Default (if no change)
         $amount_paid = 0;
 
+        // ... (inside core/process_payment.php) ...
+
         // 3. PROCESS UPDATES BASED ON TYPE
         if ($payment_type == 'interest_only') {
             // --- RENEWAL ---
             $amount_paid = $_POST['amount_paid'];
-            // New Principal is same as Old
             
-            // Extend Dates
+            // Only update last_renewed_date and push deadlines forward
             $sql = "UPDATE transactions 
-                    SET maturity_date = DATE_ADD(maturity_date, INTERVAL 1 MONTH),
-                        expiry_date = DATE_ADD(expiry_date, INTERVAL 1 MONTH)
+                    SET last_renewed_date = CURRENT_TIMESTAMP,
+                        maturity_date = DATE_ADD(CURDATE(), INTERVAL 30 DAY),
+                        expiry_date = DATE_ADD(CURDATE(), INTERVAL 120 DAY)
                     WHERE transaction_id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("i", $trans_id);
@@ -53,18 +55,20 @@ if (isset($_POST['btn_process_payment'])) {
             $deduction = $_POST['principal_deduction'];
             $amount_paid = $interest + $deduction;
             
-            // Calculate New Principal
             $new_principal = $old_principal - $deduction;
 
-            // Update Principal & Dates
+            // Shrink principal, update last_renewed_date, and push deadlines forward
             $sql = "UPDATE transactions 
                     SET principal_amount = ?,
-                        maturity_date = DATE_ADD(maturity_date, INTERVAL 1 MONTH),
-                        expiry_date = DATE_ADD(expiry_date, INTERVAL 1 MONTH)
+                        last_renewed_date = CURRENT_TIMESTAMP,
+                        maturity_date = DATE_ADD(CURDATE(), INTERVAL 30 DAY),
+                        expiry_date = DATE_ADD(CURDATE(), INTERVAL 120 DAY)
                     WHERE transaction_id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("di", $new_principal, $trans_id);
             $stmt->execute();
+            
+        // ... (rest of your code) ...
 
         } elseif ($payment_type == 'full_redemption') {
             // --- FULL REDEMPTION ---
