@@ -61,7 +61,7 @@ $fullname = $_SESSION['full_name'] ?? 'Teller';
             box-shadow: 4px 0 15px rgba(0,0,0,0.1);
         }
         #sidebar-wrapper.toggled { margin-left: 0; }
-        #page-content-wrapper { width: 100%; transition: margin 0.25s ease-out; margin-left: 0; display: flex; flex-direction: column; min-height: 100vh; }
+ upd        #page-content-wrapper { width: 100%; transition: margin 0.25s ease-out; margin-left: 0; display: flex; flex-direction: column; min-height: 100vh; }
         @media (min-width: 768px) {
             #sidebar-wrapper { margin-left: 0; }
             #page-content-wrapper { margin-left: 260px; }
