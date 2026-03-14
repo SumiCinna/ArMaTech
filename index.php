@@ -213,7 +213,7 @@ include_once 'includes/header.php';
                     <i class="fa-solid fa-laptop-code fs-3 text-primary me-2"></i>
                     <span class="fs-4 fw-extrabold text-dark" style="letter-spacing: -1px;">ArMaTech.</span>
                 </div>
-                <p class="text-secondary small mb-4 pe-lg-5">A capstone project by BS Information System students demonstrating the practical integration of software engineering and CRM principles.</p>
+                <p class="text-secondary small mb-4 pe-lg-5">This system integrates core retail functions into a single platform, aiming to minimize inefficiencies and enhance scalability through up to date software design.</p>
                 
                 <h6 class="fw-bold text-dark mb-2 small text-uppercase tracking-wide">Institution</h6>
                 <p class="text-secondary small mb-0">Computer Studies Department</p>

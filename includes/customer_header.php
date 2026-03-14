@@ -36,7 +36,7 @@ $fullname = $_SESSION['fullname'] ?? 'Customer';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+        body { background-color: #f4f7fa; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         
         /* Modern Navbar */
         .navbar { 
