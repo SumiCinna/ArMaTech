@@ -113,19 +113,37 @@ while($row = $res_status->fetch_assoc()){
 }
 
 // --- D. Top Tellers by Collection ---
+$teller_range = $_GET['teller_range'] ?? 'all_time';
+$teller_where = "1=1";
+if ($teller_range == '7_days') $teller_where = "p.date_paid >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+elseif ($teller_range == 'this_month') $teller_where = "p.date_paid >= DATE_FORMAT(NOW() ,'%Y-%m-01')";
+elseif ($teller_range == 'last_3_months') $teller_where = "p.date_paid >= DATE_SUB(NOW(), INTERVAL 3 MONTH)";
+elseif ($teller_range == '6_months') $teller_where = "p.date_paid >= DATE_SUB(NOW(), INTERVAL 6 MONTH)";
+elseif ($teller_range == '1_year') $teller_where = "p.date_paid >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+
 $sql_tellers = "SELECT a.username, SUM(p.amount_paid) as total_collected, COUNT(p.payment_id) as txn_count 
                 FROM payments p 
                 JOIN accounts a ON p.teller_id = a.account_id 
+                WHERE $teller_where
                 GROUP BY p.teller_id 
                 ORDER BY total_collected DESC LIMIT 5";
 $res_tellers = $conn->query($sql_tellers);
 
-// --- E. NEW: Top Customers (Loyalty Program) ---
+// --- E. Top Customers (Loyalty Program) ---
+$client_range = $_GET['client_range'] ?? 'all_time';
+$client_where = "1=1";
+if ($client_range == '7_days') $client_where = "t.date_pawned >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+elseif ($client_range == 'this_month') $client_where = "t.date_pawned >= DATE_FORMAT(NOW() ,'%Y-%m-01')";
+elseif ($client_range == 'last_3_months') $client_where = "t.date_pawned >= DATE_SUB(NOW(), INTERVAL 3 MONTH)";
+elseif ($client_range == '6_months') $client_where = "t.date_pawned >= DATE_SUB(NOW(), INTERVAL 6 MONTH)";
+elseif ($client_range == '1_year') $client_where = "t.date_pawned >= DATE_SUB(NOW(), INTERVAL 1 YEAR)";
+
 $sql_top_cust = "SELECT p.first_name, p.last_name, p.public_id, 
                         COUNT(t.transaction_id) as txn_count, 
                         SUM(t.principal_amount) as total_value
                  FROM profiles p
                  JOIN transactions t ON p.profile_id = t.customer_id
+                 WHERE $client_where
                  GROUP BY p.profile_id
                  ORDER BY txn_count DESC, total_value DESC LIMIT 5";
 $res_top_cust = $conn->query($sql_top_cust);
@@ -212,7 +230,9 @@ $res_top_cust = $conn->query($sql_top_cust);
                 <div class="card-header bg-white p-4 pb-0 border-0 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-line me-2 text-primary"></i> <?php echo $chart_title_text; ?></h6>
                     <form method="GET" class="d-inline-block">
-                        <input type="hidden" name="activity_range" value="<?php echo htmlspecialchars($activity_range); ?>" id="activityRange">
+                        <input type="hidden" name="activity_range" value="<?php echo htmlspecialchars($activity_range); ?>">
+                        <input type="hidden" name="teller_range" value="<?php echo htmlspecialchars($teller_range); ?>">
+                        <input type="hidden" name="client_range" value="<?php echo htmlspecialchars($client_range); ?>">
                         <select name="chart_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none rounded-pill px-3" onchange="this.form.submit()">
                             <option value="7_days" <?php echo ($chart_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
                             <option value="30_days" <?php echo ($chart_range == '30_days') ? 'selected' : ''; ?>>30 Days</option>
@@ -232,7 +252,9 @@ $res_top_cust = $conn->query($sql_top_cust);
                 <div class="card-header bg-white p-4 pb-0 border-0 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-calendar-day me-2 text-warning"></i> Peak Activity</h6>
                     <form method="GET" class="d-inline-block">
-                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>" id="chartRange">
+                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>">
+                        <input type="hidden" name="teller_range" value="<?php echo htmlspecialchars($teller_range); ?>">
+                        <input type="hidden" name="client_range" value="<?php echo htmlspecialchars($client_range); ?>">
                         <select name="activity_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none rounded-pill px-3" onchange="this.form.submit()">
                             <option value="7_days" <?php echo ($activity_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
                             <option value="1_month" <?php echo ($activity_range == '1_month') ? 'selected' : ''; ?>>1 Month</option>
@@ -318,9 +340,7 @@ $res_top_cust = $conn->query($sql_top_cust);
                 <div class="card-body d-flex flex-column align-items-center justify-content-center pt-0 pb-4">
                     <div style="height: 220px; width: 220px; position: relative;">
                         <canvas id="statusChart"></canvas>
-                        <div class="position-absolute top-50 start-50 translate-middle text-muted opacity-25">
-                            <i class="fa-solid fa-vault fs-1"></i>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -336,6 +356,19 @@ $res_top_cust = $conn->query($sql_top_cust);
                         <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-crown me-2 text-warning"></i> Top Valued Clients</h6>
                         <small class="text-muted" style="font-size: 0.7rem;">Highest total transaction volume & lifetime value</small>
                     </div>
+                    <form method="GET" class="d-inline-block">
+                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>">
+                        <input type="hidden" name="activity_range" value="<?php echo htmlspecialchars($activity_range); ?>">
+                        <input type="hidden" name="teller_range" value="<?php echo htmlspecialchars($teller_range); ?>">
+                        <select name="client_range" class="form-select form-select-sm bg-warning bg-opacity-10 text-warning border-0 fw-bold shadow-none rounded-pill px-3" onchange="this.form.submit()">
+                            <option value="all_time" <?php echo ($client_range == 'all_time') ? 'selected' : ''; ?>>All Time</option>
+                            <option value="7_days" <?php echo ($client_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
+                            <option value="this_month" <?php echo ($client_range == 'this_month') ? 'selected' : ''; ?>>This Month</option>
+                            <option value="last_3_months" <?php echo ($client_range == 'last_3_months') ? 'selected' : ''; ?>>3 Months</option>
+                            <option value="6_months" <?php echo ($client_range == '6_months') ? 'selected' : ''; ?>>6 Months</option>
+                            <option value="1_year" <?php echo ($client_range == '1_year') ? 'selected' : ''; ?>>1 Year</option>
+                        </select>
+                    </form>
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
@@ -368,7 +401,7 @@ $res_top_cust = $conn->query($sql_top_cust);
                                 </li>
                             <?php $rank++; endwhile; ?>
                         <?php else: ?>
-                            <li class="list-group-item text-center text-muted py-5 border-0">No customer data available.</li>
+                            <li class="list-group-item text-center text-muted py-5 border-0">No customer data available for this timeframe.</li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -380,8 +413,21 @@ $res_top_cust = $conn->query($sql_top_cust);
                 <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-medal me-2 text-info"></i> Top Performing Tellers</h6>
-                        <small class="text-muted" style="font-size: 0.7rem;">Highest cash collection volume</small>
+                        <small class="text-muted" style="font-size: 0.7rem;">Highest collection volume</small>
                     </div>
+                    <form method="GET" class="d-inline-block">
+                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>">
+                        <input type="hidden" name="activity_range" value="<?php echo htmlspecialchars($activity_range); ?>">
+                        <input type="hidden" name="client_range" value="<?php echo htmlspecialchars($client_range); ?>">
+                        <select name="teller_range" class="form-select form-select-sm bg-info bg-opacity-10 text-info border-0 fw-bold shadow-none rounded-pill px-3" onchange="this.form.submit()">
+                            <option value="all_time" <?php echo ($teller_range == 'all_time') ? 'selected' : ''; ?>>All Time</option>
+                            <option value="7_days" <?php echo ($teller_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
+                            <option value="this_month" <?php echo ($teller_range == 'this_month') ? 'selected' : ''; ?>>This Month</option>
+                            <option value="last_3_months" <?php echo ($teller_range == 'last_3_months') ? 'selected' : ''; ?>>3 Months</option>
+                            <option value="6_months" <?php echo ($teller_range == '6_months') ? 'selected' : ''; ?>>6 Months</option>
+                            <option value="1_year" <?php echo ($teller_range == '1_year') ? 'selected' : ''; ?>>1 Year</option>
+                        </select>
+                    </form>
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
@@ -394,7 +440,7 @@ $res_top_cust = $conn->query($sql_top_cust);
                                         </div>
                                         <div>
                                             <h6 class="mb-0 fw-bold text-dark"><?php echo ucfirst($teller['username']); ?></h6>
-                                            <small class="text-muted"><i class="fa-solid fa-receipt me-1"></i> <?php echo $teller['txn_count']; ?> Payments Processed</small>
+                                            <small class="text-muted"><i class="fa-solid fa-receipt me-1"></i> <?php echo $teller['txn_count']; ?> Payments</small>
                                         </div>
                                     </div>
                                     <div class="text-end">
@@ -404,7 +450,7 @@ $res_top_cust = $conn->query($sql_top_cust);
                                 </li>
                             <?php $rank++; endwhile; ?>
                         <?php else: ?>
-                            <li class="list-group-item text-center text-muted py-5 border-0">No teller data available.</li>
+                            <li class="list-group-item text-center text-muted py-5 border-0">No teller data available for this timeframe.</li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -416,11 +462,10 @@ $res_top_cust = $conn->query($sql_top_cust);
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Global Chart Settings for modern look
     Chart.defaults.font.family = "'Inter', 'Helvetica Neue', 'Arial', sans-serif";
     Chart.defaults.color = '#6c757d';
 
-    // 1. Revenue Chart (Line)
+    // 1. Revenue Chart
     const ctxRev = document.getElementById('revenueChart').getContext('2d');
     new Chart(ctxRev, {
         type: 'line',
@@ -431,18 +476,13 @@ $res_top_cust = $conn->query($sql_top_cust);
                 data: <?php echo json_encode($revenue_data); ?>,
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.05)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#0d6efd',
-                pointHoverRadius: 6
+                borderWidth: 3, fill: true, tension: 0.4,
+                pointRadius: 4, pointBackgroundColor: '#fff',
+                pointBorderColor: '#0d6efd', pointHoverRadius: 6
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { 
                 y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f2f4' }, border: {display: false} }, 
@@ -451,7 +491,7 @@ $res_top_cust = $conn->query($sql_top_cust);
         }
     });
 
-    // 2. Activity Chart (Bar)
+    // 2. Activity Chart
     const ctxAct = document.getElementById('activityChart').getContext('2d');
     new Chart(ctxAct, {
         type: 'bar',
@@ -460,15 +500,11 @@ $res_top_cust = $conn->query($sql_top_cust);
             datasets: [{
                 label: 'Transactions',
                 data: <?php echo json_encode($activity_counts); ?>,
-                backgroundColor: '#ffc107',
-                borderRadius: 6,
-                borderSkipped: false,
-                barThickness: 12
+                backgroundColor: '#ffc107', borderRadius: 6, barThickness: 12
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { 
                 y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f2f4' }, border: {display: false}, ticks: { stepSize: 1 } }, 
@@ -477,7 +513,7 @@ $res_top_cust = $conn->query($sql_top_cust);
         }
     });
 
-    // 3. Status Chart (Doughnut)
+    // 3. Status Chart
     const ctxStat = document.getElementById('statusChart').getContext('2d');
     new Chart(ctxStat, {
         type: 'doughnut',
@@ -486,21 +522,17 @@ $res_top_cust = $conn->query($sql_top_cust);
             datasets: [{
                 data: <?php echo json_encode($status_counts); ?>,
                 backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#6c757d', '#ffc107'],
-                borderWidth: 0,
-                hoverOffset: 4
+                borderWidth: 0, hoverOffset: 4
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, boxWidth: 8, font: {size: 12, weight: 'bold'} } } 
-            },
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, boxWidth: 8, font: {size: 12, weight: 'bold'} } } },
             cutout: '80%'
         }
     });
 
-    // Maintain Scroll Position
+    // Maintain Scroll Position on Refresh
     document.addEventListener("DOMContentLoaded", function() {
         let scrollpos = sessionStorage.getItem('dashboard_scrollpos');
         if (scrollpos) { window.scrollTo(0, parseInt(scrollpos)); }
