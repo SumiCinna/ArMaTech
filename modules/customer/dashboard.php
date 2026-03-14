@@ -234,6 +234,9 @@ $grand_total = $total_principal + $total_interest;
                         </div>
 
                         <div class="card-footer bg-white border-top-0 p-3 text-center">
+                            <a href="view_details.php?id=<?php echo $t['transaction_id']; ?>" class="btn btn-outline-primary btn-sm rounded-pill fw-bold w-100 mb-2 shadow-sm">
+                                <i class="fa-solid fa-eye me-1"></i> View Details
+                            </a>
                             <small class="text-muted d-block mb-0" style="font-size: 0.7rem;">Visit any ArMaTech branch to pay or renew.</small>
                         </div>
                     </div>

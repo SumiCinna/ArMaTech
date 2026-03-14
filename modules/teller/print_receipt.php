@@ -39,7 +39,7 @@ if (!$data) die("Receipt not found.");
 
 // 3. FORMATTING
 // Format Invoice Number: INV-0001
-$invoice_no = "INV-" . str_pad($data['payment_id'], 3, '0', STR_PAD_LEFT);
+$invoice_no = "INV-" . str_pad($data['payment_id'], 6, '0', STR_PAD_LEFT);
 $date_paid = date('M d, Y h:i A', strtotime($data['date_paid']));
 
 // Readable Payment Type

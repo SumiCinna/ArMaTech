@@ -70,8 +70,8 @@ while($row = $res_chart->fetch_assoc()){
     $revenue_data[] = $row['total'];
 }
 
-// --- B. DATA MINING: Time-Series Activity (Dynamic) ---
-$activity_range = $_GET['activity_range'] ?? '1_month'; // Default to 1 month
+// --- B. DATA MINING: Time-Series Activity ---
+$activity_range = $_GET['activity_range'] ?? '1_month'; 
 $activity_interval_sql = "";
 
 if ($activity_range == '7_days') {
@@ -82,12 +82,10 @@ if ($activity_range == '7_days') {
     $activity_interval_sql = "WHERE date_paid >= DATE_SUB(NOW(), INTERVAL 2 MONTH)";
 } elseif ($activity_range == '6_months') {
     $activity_interval_sql = "WHERE date_paid >= DATE_SUB(NOW(), INTERVAL 6 MONTH)";
-} else {
-    $activity_interval_sql = ""; // All Time
 }
 
 $activity_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-$activity_counts = [0,0,0,0,0,0,0]; // Default zeros
+$activity_counts = [0,0,0,0,0,0,0]; 
 
 $sql_activity = "SELECT DAYNAME(date_paid) as day_of_week, COUNT(*) as txn_count 
                  FROM payments 
@@ -119,139 +117,153 @@ $sql_tellers = "SELECT a.username, SUM(p.amount_paid) as total_collected, COUNT(
                 FROM payments p 
                 JOIN accounts a ON p.teller_id = a.account_id 
                 GROUP BY p.teller_id 
-                ORDER BY total_collected DESC LIMIT 4";
+                ORDER BY total_collected DESC LIMIT 5";
 $res_tellers = $conn->query($sql_tellers);
+
+// --- E. NEW: Top Customers (Loyalty Program) ---
+$sql_top_cust = "SELECT p.first_name, p.last_name, p.public_id, 
+                        COUNT(t.transaction_id) as txn_count, 
+                        SUM(t.principal_amount) as total_value
+                 FROM profiles p
+                 JOIN transactions t ON p.profile_id = t.customer_id
+                 GROUP BY p.profile_id
+                 ORDER BY txn_count DESC, total_value DESC LIMIT 5";
+$res_top_cust = $conn->query($sql_top_cust);
 ?>
 
 <div class="container-fluid px-4 pb-5">
-    <h3 class="fw-bold text-dark mt-4 mb-4">Executive Dashboard</h3>
-
-    <div class="row g-4 mb-4">
-        
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-4 border-success h-100">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <small class="text-muted text-uppercase fw-bold">Cash In (Today)</small>
-                        <h3 class="fw-bold mb-0 text-success">₱<?php echo number_format($res_cash['today_sales'] ?? 0, 2); ?></h3>
-                    </div>
-                    <div class="bg-success bg-opacity-10 text-success rounded p-3">
-                        <i class="fa-solid fa-cash-register fa-lg"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0"><i class="fa-solid fa-gauge-high me-2 text-primary"></i> Executive Dashboard</h3>
+            <p class="text-muted small mb-0">Overview of operational metrics, revenue, and key relationships.</p>
         </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary h-100">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <small class="text-muted text-uppercase fw-bold">Active Lending</small>
-                        <h3 class="fw-bold mb-0 text-primary">₱<?php echo number_format($res_principal['total'] ?? 0, 2); ?></h3>
-                    </div>
-                    <div class="bg-primary bg-opacity-10 text-primary rounded p-3">
-                        <i class="fa-solid fa-hand-holding-dollar fa-lg"></i>
-                    </div>
-                </div>
-            </div>
+        <div class="d-none d-md-block">
+            <span class="badge bg-white text-dark border shadow-sm px-3 py-2 rounded-pill fw-bold">
+                <i class="fa-regular fa-calendar text-primary me-2"></i> <?php echo date('F d, Y'); ?>
+            </span>
         </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-4 border-dark h-100">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <small class="text-muted text-uppercase fw-bold">Total Customers</small>
-                        <h3 class="fw-bold mb-0 text-dark"><?php echo $res_cust['count']; ?></h3>
-                    </div>
-                    <div class="bg-dark bg-opacity-10 text-dark rounded p-3">
-                        <i class="fa-solid fa-users fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-4 border-danger h-100">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <small class="text-danger text-uppercase fw-bold"><i class="fa-solid fa-brain me-1"></i> Default Risk</small>
-                        <h3 class="fw-bold mb-0 text-dark"><?php echo $res_high_risk['risk_count']; ?></h3>
-                        <small class="text-muted" style="font-size: 0.65rem;">High-value items nearing expiry</small>
-                    </div>
-                    <div class="bg-danger bg-opacity-10 text-danger rounded p-3">
-                        <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <div class="row g-4 mb-4">
-        
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 stat-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-cash-register fs-5"></i>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Today</span>
+                    </div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Cash Collection</small>
+                    <h3 class="fw-bold mb-0 text-dark">₱<?php echo number_format($res_cash['today_sales'] ?? 0, 2); ?></h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 stat-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-hand-holding-dollar fs-5"></i>
+                        </div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">Active</span>
+                    </div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Capital Lent</small>
+                    <h3 class="fw-bold mb-0 text-dark">₱<?php echo number_format($res_principal['total'] ?? 0, 2); ?></h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 stat-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="bg-dark bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-users fs-5"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Total Customers</small>
+                    <h3 class="fw-bold mb-0 text-dark"><?php echo number_format($res_cust['count']); ?></h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 stat-card" style="background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+                        </div>
+                        <span class="badge bg-danger rounded-pill"><i class="fa-solid fa-brain me-1"></i> AI Alert</span>
+                    </div>
+                    <small class="text-danger text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Default Risk</small>
+                    <h3 class="fw-bold mb-0 text-danger"><?php echo $res_high_risk['risk_count']; ?> <span class="fs-6 fw-normal text-muted">items</span></h3>
+                    <small class="text-muted" style="font-size: 0.65rem;">High-value assets nearing expiry</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-0">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white p-4 pb-0 border-0 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-line me-2 text-primary"></i> <?php echo $chart_title_text; ?></h6>
                     <form method="GET" class="d-inline-block">
                         <input type="hidden" name="activity_range" value="<?php echo htmlspecialchars($activity_range); ?>" id="activityRange">
-                        <select name="chart_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none" onchange="this.form.submit()">
-                            <option value="7_days" <?php echo ($chart_range == '7_days') ? 'selected' : ''; ?>>Last 7 Days</option>
-                            <option value="30_days" <?php echo ($chart_range == '30_days') ? 'selected' : ''; ?>>Last 30 Days</option>
-                            <option value="6_months" <?php echo ($chart_range == '6_months') ? 'selected' : ''; ?>>Last 6 Months</option>
-                            <option value="1_year" <?php echo ($chart_range == '1_year') ? 'selected' : ''; ?>>Last 1 Year</option>
+                        <select name="chart_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none rounded-pill px-3" onchange="this.form.submit()">
+                            <option value="7_days" <?php echo ($chart_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
+                            <option value="30_days" <?php echo ($chart_range == '30_days') ? 'selected' : ''; ?>>30 Days</option>
+                            <option value="6_months" <?php echo ($chart_range == '6_months') ? 'selected' : ''; ?>>6 Months</option>
+                            <option value="1_year" <?php echo ($chart_range == '1_year') ? 'selected' : ''; ?>>1 Year</option>
                         </select>
                     </form>
                 </div>
-                <div class="card-body pt-0">
+                <div class="card-body p-4 pt-2">
                     <canvas id="revenueChart" style="height: 280px; width: 100%;"></canvas>
                  </div>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-0">
-                    <div>
-                        <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-calendar-day me-2 text-warning"></i> Peak Activity</h6>
-                    </div>
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white p-4 pb-0 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-calendar-day me-2 text-warning"></i> Peak Activity</h6>
                     <form method="GET" class="d-inline-block">
-                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>" id = "chartRange">
-                        <select name="activity_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none" onchange="this.form.submit()">
-                            <option value="7_days" <?php echo ($activity_range == '7_days') ? 'selected' : ''; ?>>Last 7 Days</option>
-                            <option value="1_month" <?php echo ($activity_range == '1_month') ? 'selected' : ''; ?>>Last 1 Month</option>
-                            <option value="2_months" <?php echo ($activity_range == '2_months') ? 'selected' : ''; ?>>Last 2 Months</option>
-                            <option value="6_months" <?php echo ($activity_range == '6_months') ? 'selected' : ''; ?>>Last 6 Months</option>
-                            <option value="all_time" <?php echo ($activity_range == 'all_time') ? 'selected' : ''; ?>>All Time</option>
+                        <input type="hidden" name="chart_range" value="<?php echo htmlspecialchars($chart_range); ?>" id="chartRange">
+                        <select name="activity_range" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary shadow-none rounded-pill px-3" onchange="this.form.submit()">
+                            <option value="7_days" <?php echo ($activity_range == '7_days') ? 'selected' : ''; ?>>7 Days</option>
+                            <option value="1_month" <?php echo ($activity_range == '1_month') ? 'selected' : ''; ?>>1 Month</option>
+                            <option value="6_months" <?php echo ($activity_range == '6_months') ? 'selected' : ''; ?>>6 Months</option>
                         </select>
                     </form>
                 </div>
-                <div class="card-body pt-0">
+                <div class="card-body p-4 pt-2">
                     <canvas id="activityChart" style="height: 250px; width: 100%;"></canvas>
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="row g-4 mb-4">
-        
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-0">
-                    <h6 class="mb-0 fw-bold"><i class="fa-solid fa-list-check me-2"></i> Recent Transactions</h6>
-                    <a href="reports_sales.php" class="btn btn-sm btn-light border text-primary fw-bold">View All</a>
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-list-check me-2 text-secondary"></i> Recent System Activity</h6>
+                    <a href="reports_sales.php" class="btn btn-sm btn-light border text-primary fw-bold rounded-pill px-3">View Full Log</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-borderless table-hover align-middle mb-0">
-                            <thead class="bg-light text-muted small text-uppercase border-bottom">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-muted small text-uppercase">
                                 <tr>
-                                    <th class="ps-4 py-3">Date</th>
-                                    <th class="py-3">Teller</th>
+                                    <th class="ps-4 py-3">Date & Time</th>
+                                    <th class="py-3">Processed By</th>
                                     <th class="py-3">Type</th>
                                     <th class="py-3">Amount</th>
-                                    <th class="py-3">PT Number</th>
+                                    <th class="py-3 pe-4">PT Number</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -260,29 +272,36 @@ $res_tellers = $conn->query($sql_tellers);
                                             FROM payments p 
                                             JOIN accounts a ON p.teller_id = a.account_id
                                             JOIN transactions t ON p.transaction_id = t.transaction_id
-                                            ORDER BY p.date_paid DESC LIMIT 6";
+                                            ORDER BY p.date_paid DESC LIMIT 5";
                                 $res_recent = $conn->query($sql_recent);
                                 
                                 if($res_recent->num_rows > 0):
                                     while($row = $res_recent->fetch_assoc()):
                                 ?>
-                                    <tr class="border-bottom">
-                                        <td class="ps-4 text-nowrap"><?php echo date('M d, Y h:i A', strtotime($row['date_paid'])); ?></td>
-                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary border"><?php echo strtoupper($row['username']); ?></span></td>
+                                    <tr style="border-bottom: 1px solid #f8f9fa;">
+                                        <td class="ps-4 text-nowrap"><span class="text-dark fw-bold"><?php echo date('M d, Y', strtotime($row['date_paid'])); ?></span> <span class="text-muted small ms-1"><?php echo date('h:i A', strtotime($row['date_paid'])); ?></span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.7rem; font-weight:bold;">
+                                                    <?php echo substr($row['username'], 0, 2); ?>
+                                                </div>
+                                                <span class="small fw-bold"><?php echo ucfirst($row['username']); ?></span>
+                                            </div>
+                                        </td>
                                         <td>
                                             <?php if($row['payment_type'] == 'interest_only'): ?>
-                                                <span class="badge bg-info bg-opacity-10 text-info">Renewal</span>
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill">Renewal</span>
                                             <?php elseif($row['payment_type'] == 'partial_payment'): ?>
-                                                <span class="badge bg-warning bg-opacity-10 text-warning">Partial</span>
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">Partial</span>
                                             <?php else: ?>
-                                                <span class="badge bg-success bg-opacity-10 text-success">Redeem</span>
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Redemption</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="fw-bold text-success">₱<?php echo number_format($row['amount_paid'], 2); ?></td>
-                                        <td class="text-muted small font-monospace"><?php echo $row['pt_number']; ?></td>
+                                        <td class="text-muted small font-monospace pe-4"><?php echo $row['pt_number']; ?></td>
                                     </tr>
                                 <?php endwhile; else: ?>
-                                    <tr><td colspan="5" class="text-center py-5 text-muted">No recent activity.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-5 text-muted">No recent activity found.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -291,41 +310,101 @@ $res_tellers = $conn->query($sql_tellers);
             </div>
         </div>
 
-        <div class="col-lg-4 d-flex flex-column gap-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-pie me-2 text-success"></i> Loan Portfolio Status</h6>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white p-4 border-0">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-pie me-2 text-success"></i> Portfolio Health</h6>
                 </div>
-                <div class="card-body d-flex align-items-center justify-content-center pt-0 pb-4">
-                    <div style="height: 180px; width: 180px;">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center pt-0 pb-4">
+                    <div style="height: 220px; width: 220px; position: relative;">
                         <canvas id="statusChart"></canvas>
+                        <div class="position-absolute top-50 start-50 translate-middle text-muted opacity-25">
+                            <i class="fa-solid fa-vault fs-1"></i>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="card shadow-sm border-0 flex-grow-1">
-                <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold"><i class="fa-solid fa-trophy me-2 text-warning"></i> Top Tellers</h6>
+    <div class="row g-4 mb-4">
+        
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4 h-100 border-top border-4 border-warning">
+                <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-crown me-2 text-warning"></i> Top Valued Clients</h6>
+                        <small class="text-muted" style="font-size: 0.7rem;">Highest total transaction volume & lifetime value</small>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <?php if($res_top_cust->num_rows > 0): ?>
+                            <?php $rank = 1; while($cust = $res_top_cust->fetch_assoc()): ?>
+                                <li class="list-group-item d-flex justify-content-between align-items-center p-4 border-0 border-bottom custom-hover">
+                                    <div class="d-flex align-items-center">
+                                        <div class="position-relative me-3">
+                                            <div class="avatar-circle <?php echo ($rank==1) ? 'bg-warning text-dark shadow-sm' : 'bg-primary bg-opacity-10 text-primary'; ?> fw-bold d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; border-radius: 12px;">
+                                                <?php echo substr($cust['first_name'], 0, 1) . substr($cust['last_name'], 0, 1); ?>
+                                            </div>
+                                            <?php if($rank <= 3): ?>
+                                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem;">
+                                                    #<?php echo $rank; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark"><?php echo htmlspecialchars($cust['first_name'] . ' ' . $cust['last_name']); ?></h6>
+                                            <div class="d-flex align-items-center mt-1 gap-2">
+                                                <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.65rem;">ID: <?php echo $cust['public_id']; ?></span>
+                                                <small class="text-muted fw-bold" style="font-size: 0.7rem;"><i class="fa-solid fa-handshake ms-1 me-1 text-secondary"></i> <?php echo $cust['txn_count']; ?> Loans</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem;">Lifetime Value</small>
+                                        <span class="fw-bold text-success fs-6">₱<?php echo number_format($cust['total_value'], 2); ?></span>
+                                    </div>
+                                </li>
+                            <?php $rank++; endwhile; ?>
+                        <?php else: ?>
+                            <li class="list-group-item text-center text-muted py-5 border-0">No customer data available.</li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4 h-100 border-top border-4 border-info">
+                <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-medal me-2 text-info"></i> Top Performing Tellers</h6>
+                        <small class="text-muted" style="font-size: 0.7rem;">Highest cash collection volume</small>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
                         <?php if($res_tellers->num_rows > 0): ?>
                             <?php $rank = 1; while($teller = $res_tellers->fetch_assoc()): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
+                                <li class="list-group-item d-flex justify-content-between align-items-center p-4 border-0 border-bottom custom-hover">
                                     <div class="d-flex align-items-center">
-                                        <div class="rounded-circle <?php echo ($rank==1) ? 'bg-warning text-dark' : 'bg-light text-muted border'; ?> fw-bold d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
-                                            <?php echo $rank++; ?>
+                                        <div class="rounded-circle <?php echo ($rank==1) ? 'bg-info text-white shadow-sm' : 'bg-light text-muted border'; ?> fw-bold d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                            <?php echo $rank; ?>
                                         </div>
                                         <div>
-                                            <h6 class="mb-0 fw-bold text-dark"><?php echo $teller['username']; ?></h6>
-                                            <small class="text-muted"><?php echo $teller['txn_count']; ?> Transactions</small>
+                                            <h6 class="mb-0 fw-bold text-dark"><?php echo ucfirst($teller['username']); ?></h6>
+                                            <small class="text-muted"><i class="fa-solid fa-receipt me-1"></i> <?php echo $teller['txn_count']; ?> Payments Processed</small>
                                         </div>
                                     </div>
-                                    <span class="fw-bold text-primary">₱<?php echo number_format($teller['total_collected'], 2); ?></span>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem;">Total Collected</small>
+                                        <span class="fw-bold text-primary fs-6">₱<?php echo number_format($teller['total_collected'], 2); ?></span>
+                                    </div>
                                 </li>
-                            <?php endwhile; ?>
+                            <?php $rank++; endwhile; ?>
                         <?php else: ?>
-                            <li class="list-group-item text-center text-muted py-4 border-0">No data available.</li>
+                            <li class="list-group-item text-center text-muted py-5 border-0">No teller data available.</li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -337,6 +416,10 @@ $res_tellers = $conn->query($sql_tellers);
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Global Chart Settings for modern look
+    Chart.defaults.font.family = "'Inter', 'Helvetica Neue', 'Arial', sans-serif";
+    Chart.defaults.color = '#6c757d';
+
     // 1. Revenue Chart (Line)
     const ctxRev = document.getElementById('revenueChart').getContext('2d');
     new Chart(ctxRev, {
@@ -347,28 +430,28 @@ $res_tellers = $conn->query($sql_tellers);
                 label: 'Revenue (₱)',
                 data: <?php echo json_encode($revenue_data); ?>,
                 borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                backgroundColor: 'rgba(13, 110, 253, 0.05)',
                 borderWidth: 3,
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
                 pointBackgroundColor: '#fff',
-                pointBorderColor: '#0d6efd'
+                pointBorderColor: '#0d6efd',
+                pointHoverRadius: 6
             }]
         },
-       options: {
+        options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { 
-                y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, 
-                x: { grid: { display: false } } 
+                y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f2f4' }, border: {display: false} }, 
+                x: { grid: { display: false }, border: {display: false} } 
             }
-           
         }
     });
 
-    // 2. DATA MINING: Activity Chart (Bar)
+    // 2. Activity Chart (Bar)
     const ctxAct = document.getElementById('activityChart').getContext('2d');
     new Chart(ctxAct, {
         type: 'bar',
@@ -377,10 +460,10 @@ $res_tellers = $conn->query($sql_tellers);
             datasets: [{
                 label: 'Transactions',
                 data: <?php echo json_encode($activity_counts); ?>,
-                backgroundColor: 'rgba(245, 158, 11, 0.7)', // Warning Yellow
-                borderColor: '#f59e0b',
-                borderWidth: 1,
-                borderRadius: 4
+                backgroundColor: '#ffc107',
+                borderRadius: 6,
+                borderSkipped: false,
+                barThickness: 12
             }]
         },
         options: {
@@ -388,8 +471,8 @@ $res_tellers = $conn->query($sql_tellers);
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { 
-                y: { beginAtZero: true, grid: { borderDash: [4, 4] }, ticks: { stepSize: 1 } }, 
-                x: { grid: { display: false } } 
+                y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f2f4' }, border: {display: false}, ticks: { stepSize: 1 } }, 
+                x: { grid: { display: false }, border: {display: false} } 
             }
         }
     });
@@ -403,29 +486,34 @@ $res_tellers = $conn->query($sql_tellers);
             datasets: [{
                 data: <?php echo json_encode($status_counts); ?>,
                 backgroundColor: ['#198754', '#dc3545', '#0d6efd', '#6c757d', '#ffc107'],
-                borderWidth: 2,
-                borderColor: '#fff'
+                borderWidth: 0,
+                hoverOffset: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { 
-                legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: {size: 11} } } 
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, boxWidth: 8, font: {size: 12, weight: 'bold'} } } 
             },
-            cutout: '75%'
+            cutout: '80%'
         }
     });
 
-    // Maintain Scroll Position on Page Reload (when changing chart filters)
+    // Maintain Scroll Position
     document.addEventListener("DOMContentLoaded", function() {
         let scrollpos = sessionStorage.getItem('dashboard_scrollpos');
         if (scrollpos) { window.scrollTo(0, parseInt(scrollpos)); }
     });
-
     window.addEventListener("beforeunload", function () {
         sessionStorage.setItem('dashboard_scrollpos', window.scrollY);
     });
 </script>
+
+<style>
+    .stat-card { transition: transform 0.2s ease; }
+    .stat-card:hover { transform: translateY(-5px); }
+    .custom-hover:hover { background-color: #f8faff !important; }
+</style>
 
 <?php include_once '../../includes/admin_footer.php'; ?>

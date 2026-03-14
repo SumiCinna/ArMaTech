@@ -159,7 +159,7 @@ if ($status == 'active') {
                         } elseif($row['payment_type'] == 'partial_payment') { 
                             $bg_icon = "bg-warning bg-opacity-10 text-warning"; 
                             $icon = "fa-chart-pie"; 
-                            $type_label = "Abono (Partial Payment)";
+                            $type_label = "Partial Payment";
                         }
                     ?>
                     
