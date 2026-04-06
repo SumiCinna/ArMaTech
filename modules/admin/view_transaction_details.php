@@ -13,10 +13,10 @@ if (!isset($_GET['id'])) {
 $trans_id = intval($_GET['id']);
 
 // 2. FETCH TRANSACTION, ITEM & CUSTOMER DETAILS
-// ADDED img_front, img_back, img_serial to the SELECT statement
+// We now select extra_specs to display the dynamic Python API data
 $sql = "SELECT t.*, 
                i.device_type, i.brand, i.model, i.serial_number, i.inclusions, i.condition_notes, 
-               i.img_front, i.img_back, i.img_serial,
+               i.img_front, i.img_back, i.img_serial, i.ram, i.storage_capacity, i.extra_specs,
                p.first_name, p.last_name, p.contact_number, p.email, p.public_id as cust_public_id,
                a.username as processed_by_user, tp.first_name as teller_fname, tp.last_name as teller_lname,
                b.first_name as buyer_fname, b.last_name as buyer_lname, b.contact_number as buyer_contact, b.public_id as buyer_public_id
@@ -98,7 +98,7 @@ $expire_time = strtotime($t['expiry_date']);
 $now = time();
 
 $progress_val = 0;
-$current_stage = 1; // 1: Pawned, 2: Mature, 3: Expired/Foreclosed
+$current_stage = 1; 
 
 if ($now < $mature_time) {
     $progress_val = (($now - $pawn_time) / ($mature_time - $pawn_time)) * 50; 
@@ -111,11 +111,16 @@ if ($now < $mature_time) {
     $current_stage = 3;
 }
 if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
+
+// Parse Dynamic JSON Specs (From Python API)
+$dynamic_specs = [];
+if (!empty($t['extra_specs'])) {
+    $dynamic_specs = json_decode($t['extra_specs'], true) ?: [];
+}
 ?>
 
 <div class="container-fluid px-4 pb-5">
     
-    <!-- Top Action Bar -->
     <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
         <div>
             <nav aria-label="breadcrumb">
@@ -140,7 +145,6 @@ if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
         </div>
     </div>
 
-    <!-- Hero Scorecards -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="card border-0 shadow-sm rounded-4 position-relative overflow-hidden kpi-card">
@@ -189,7 +193,6 @@ if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
         </div>
     </div>
 
-    <!-- Loan Lifecycle Indicator -->
     <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -239,10 +242,11 @@ if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
                             <h5 class="fw-bold text-dark mb-0"><?php echo htmlspecialchars($t['device_type']); ?></h5>
                             <span class="badge bg-secondary bg-opacity-10 text-secondary mt-2 border border-secondary border-opacity-25 px-3 rounded-pill">Category</span>
                         </div>
+                        
                         <div class="col-md-8 p-4 p-lg-5">
                             <h6 class="text-uppercase text-muted fw-bold small mb-4 ls-1 border-bottom pb-2"><i class="fa-solid fa-list-ul me-2 text-primary"></i> Item Specifications</h6>
                             
-                            <div class="row g-4 mb-4">
+                            <div class="row g-4 mb-3">
                                 <div class="col-sm-6">
                                     <small class="text-muted d-block mb-1 text-uppercase fw-bold" style="font-size: 0.65rem;">Brand & Model</small>
                                     <h6 class="fw-bold text-dark mb-0 fs-5"><?php echo htmlspecialchars($t['brand'] . ' ' . $t['model']); ?></h6>
@@ -253,7 +257,35 @@ if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
                                 </div>
                             </div>
 
-                            <h6 class="text-uppercase text-muted fw-bold small mb-3 mt-2 ls-1 border-bottom pb-2"><i class="fa-solid fa-camera me-2 text-primary"></i> Photographic Evidence</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-4">
+                                <?php 
+                                // Show legacy data if it exists
+                                if (!empty($t['ram']) && $t['ram'] != 'N/A') {
+                                    echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">RAM: ' . htmlspecialchars($t['ram']) . '</span>';
+                                }
+                                if (!empty($t['storage_capacity']) && $t['storage_capacity'] != 'N/A') {
+                                    echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">Storage: ' . htmlspecialchars($t['storage_capacity']) . '</span>';
+                                }
+                                
+                                // Show Dynamic Python API Data
+                                if (!empty($dynamic_specs)) {
+                                    $skip_keys = ['ram', 'storage', 'color'];
+                                    foreach ($dynamic_specs as $key => $value) {
+                                        if ($value == 'N/A' || in_array(strtolower($key), $skip_keys)) continue; 
+                                        $clean_label = ucwords(str_replace('_', ' ', $key));
+                                        echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">' . htmlspecialchars($clean_label) . ': ' . htmlspecialchars($value) . '</span>';
+                                    }
+                                }
+
+                                // Show Color specifically
+                                if (!empty($dynamic_specs['color']) || (!empty($t['color']) && $t['color'] != 'N/A')) {
+                                    $color_val = !empty($dynamic_specs['color']) ? $dynamic_specs['color'] : $t['color'];
+                                    echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">Color: ' . htmlspecialchars($color_val) . '</span>';
+                                }
+                                ?>
+                            </div>
+
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3 mt-4 ls-1 border-bottom pb-2"><i class="fa-solid fa-camera me-2 text-primary"></i> Photographic Evidence</h6>
                             
                             <?php 
                             $upload_dir = '../../uploads/pawn_items/';
@@ -318,7 +350,7 @@ if ($status == 'redeemed' || $status == 'auctioned') $progress_val = 100;
 
             <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-white py-4 px-4 d-flex justify-content-between align-items-center border-0">
-                    <h5 class="fw-bold mb-0 text-dark">Transaction Feed</h5>
+                    <h5 class="mb-0 fw-bold text-dark">Transaction Feed</h5>
                     <span class="badge bg-light text-dark fw-bold px-3 py-2 border rounded-pill">Activity Log</span>
                 </div>
                 <div class="card-body p-4 pt-0">

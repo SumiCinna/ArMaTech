@@ -122,22 +122,7 @@ $customer = $result->fetch_assoc();
                                     <label>Device Category <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="text" name="brand" id="brand_input" class="form-control" list="brands" placeholder="Brand" required autocomplete="off">
-                                    <label>Brand / Manufacturer <span class="text-danger">*</span></label>
-                                    <datalist id="brands">
-                                        <option value="Apple"><option value="Samsung"><option value="Sony">
-                                    </datalist>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="text" name="model" class="form-control" placeholder="Model" required>
-                                    <label>Model Name <span class="text-danger">*</span></label>
-                                </div>
-                            </div>
+                            
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input type="text" name="serial_number" id="serial" class="form-control font-monospace text-primary" placeholder="Serial" required>
@@ -349,8 +334,7 @@ async function fetchApiSpecs() {
     const category = document.getElementById('device_type').value;
     const container = document.getElementById('dynamic_specs');
     
-    // Clear input fields and clear the dynamic container
-    document.getElementById('brand_input').value = "";
+    // Clear container
     container.innerHTML = ''; 
     
     if (!category) return;
@@ -361,66 +345,72 @@ async function fetchApiSpecs() {
         
         if (data.status === 'success') {
             const specs = data.dynamic_specs;
-            
-            // A. Populate Brands Datalist (Since Brand is hardcoded outside the dynamic block)
-            if (specs.brands) {
-                const brandList = document.getElementById('brands');
-                brandList.innerHTML = ''; 
-                specs.brands.forEach(brand => {
-                    const option = document.createElement('option');
-                    option.value = brand;
-                    brandList.appendChild(option);
-                });
-            }
 
-            // B. DYNAMICALLY GENERATE DROPDOWNS FOR EVERYTHING ELSE!
+            // Generate TEXTBOXES WITH AUTO-COMPLETE DATALISTS for EVERY field from Python!
             for (const [key, values] of Object.entries(specs)) {
-                if (key === 'brands') continue; // We already did brands
-
-                // Make the label look nice (e.g., 'camera_type' -> 'Camera Type')
+                
+                // Format the label nicely (e.g., 'camera_type' -> 'Camera Type')
                 let labelText = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-                // Create outer column
                 let colDiv = document.createElement('div');
-                colDiv.className = 'col-md-4';
+                colDiv.className = 'col-md-6'; // Brand and Model take up more space
+                if (key !== 'brands' && key !== 'models') {
+                    colDiv.className = 'col-md-4'; // Smaller specs get 1/3 columns
+                }
 
-                // Create Bootstrap floating div
                 let floatDiv = document.createElement('div');
                 floatDiv.className = 'form-floating';
 
-                // Create SELECT element. 
-                // We name it extra_specs[key] so PHP bundles them into an array!
-                let select = document.createElement('select');
-                select.name = `extra_specs[${key}]`; 
-                select.className = 'form-select bg-light border-0';
+                let dataListId = `list_${key}`;
 
-                // Add a default "N/A" option
-                let defaultOpt = document.createElement('option');
-                defaultOpt.value = "N/A";
-                defaultOpt.innerText = "N/A";
-                select.appendChild(defaultOpt);
+                // The Input Field
+                let input = document.createElement('input');
+                input.type = 'text';
+                
+                // If it's brand or model, name them normally for PHP. Otherwise, group them into extra_specs array.
+                if (key === 'brands') {
+                    input.name = 'brand';
+                    input.required = true;
+                } else if (key === 'models') {
+                    input.name = 'model';
+                    input.required = true;
+                } else {
+                    input.name = `extra_specs[${key}]`; 
+                }
+                
+                input.className = 'form-control bg-light border-0';
+                input.placeholder = labelText;
+                input.setAttribute('list', dataListId); // Link to datalist
+                input.autocomplete = "off";
 
-                // Add options from Python API
+                // The Datalist
+                let datalist = document.createElement('datalist');
+                datalist.id = dataListId;
+
                 values.forEach(val => {
                     let option = document.createElement('option');
                     option.value = val;
-                    option.innerText = val;
-                    select.appendChild(option);
+                    datalist.appendChild(option);
                 });
 
-                // Create Label
                 let label = document.createElement('label');
                 label.innerText = labelText;
 
-                // Stitch them together and push to container
-                floatDiv.appendChild(select);
+                // Assemble
+                floatDiv.appendChild(input);
                 floatDiv.appendChild(label);
+                floatDiv.appendChild(datalist); 
                 colDiv.appendChild(floatDiv);
-                container.appendChild(colDiv);
+                
+                // Put Brand and Model first, then everything else
+                if (key === 'brands' || key === 'models') {
+                    container.insertBefore(colDiv, container.firstChild);
+                } else {
+                    container.appendChild(colDiv);
+                }
             }
 
-            // C. Always manually append the 'Color' field at the end
-            // Note: named 'color' because your DB explicitly has a 'color' column
+            // Always manually append the 'Color' field at the end
             container.innerHTML += `
                 <div class="col-md-4">
                     <div class="form-floating">
@@ -431,16 +421,19 @@ async function fetchApiSpecs() {
             `;
         }
     } catch (error) {
-        console.error("API Error - Could not connect to Python backend:", error);
+        console.error("API Error:", error);
         container.innerHTML = `
             <div class="col-12">
-                <div class="alert alert-danger small mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i> Error connecting to the specification database. Please enter details manually in the condition notes.</div>
+                <div class="alert alert-danger small mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i> Error connecting to the specification database. Please enter details manually.</div>
             </div>
-            <div class="col-md-4">
-                <div class="form-floating">
-                    <input type="text" name="color" class="form-control bg-light border-0" placeholder="Color">
-                    <label>Device Color</label>
-                </div>
+            <div class="col-md-6">
+                <div class="form-floating"><input type="text" name="brand" class="form-control bg-light border-0" placeholder="Brand" required><label>Brand</label></div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating"><input type="text" name="model" class="form-control bg-light border-0" placeholder="Model" required><label>Model</label></div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-floating"><input type="text" name="color" class="form-control bg-light border-0" placeholder="Color"><label>Device Color</label></div>
             </div>
         `;
     }
@@ -496,8 +489,13 @@ function prepareReviewModal() {
         form.querySelector(':invalid').focus();
         return;
     }
-    let brand = document.querySelector('input[name="brand"]').value;
-    let model = document.querySelector('input[name="model"]').value;
+    
+    // Safety check because Brand/Model are dynamically generated now
+    let brandInput = document.querySelector('input[name="brand"]');
+    let modelInput = document.querySelector('input[name="model"]');
+    let brand = brandInput ? brandInput.value : "Unknown";
+    let model = modelInput ? modelInput.value : "Unknown";
+    
     let serial = document.getElementById('serial').value;
     let principal = parseFloat(document.getElementById('principal').value) || 0;
 

@@ -6,7 +6,6 @@ require_once '../config/database.php';
 // Turn on error reporting so we never get stuck on a blank page again!
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// Use REQUEST_METHOD to bypass the JavaScript disabled button issue
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     try {
@@ -29,16 +28,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $inclusions = isset($_POST['inclusions']) ? implode(", ", $_POST['inclusions']) : "Unit Only";
 
         // ==========================================
-        // 3. HANDLE DYNAMIC API SPECS
+        // 3. HANDLE DYNAMIC API SPECS (TEXTBOXES)
         // ==========================================
-        $extra_specs_array = isset($_POST['extra_specs']) ? $_POST['extra_specs'] : [];
+        $extra_specs_array = isset($_POST['extra_specs']) && is_array($_POST['extra_specs']) ? $_POST['extra_specs'] : [];
         
-        // Extract storage and RAM to map to your existing legacy columns (Backwards compatibility)
-        $storage = $extra_specs_array['storage'] ?? 'N/A';
-        $ram     = $extra_specs_array['ram'] ?? 'N/A';
+        // A. Extract Storage and RAM based on the Python API keys for backwards compatibility
+        $storage = !empty($extra_specs_array['storage_capacity']) ? $extra_specs_array['storage_capacity'] : 'N/A';
+        $ram     = !empty($extra_specs_array['memory_ram']) ? $extra_specs_array['memory_ram'] : 'N/A';
 
-        // Convert the entire dynamic specs array into a JSON string for our new column
-        $extra_specs_json = !empty($extra_specs_array) ? json_encode($extra_specs_array) : null;
+        // B. Remove them from the JSON array so we don't save the same data twice!
+        unset($extra_specs_array['storage_capacity']);
+        unset($extra_specs_array['memory_ram']);
+
+        // C. Clean up empty textboxes! 
+        // Since we use text inputs now, tellers might leave them blank. We don't want to save empty JSON keys.
+        $clean_extra_specs = [];
+        foreach ($extra_specs_array as $key => $value) {
+            $val = trim($value);
+            if ($val !== '' && $val !== 'N/A') {
+                $clean_extra_specs[$key] = $val;
+            }
+        }
+
+        // Convert the cleaned array into a JSON string
+        $extra_specs_json = !empty($clean_extra_specs) ? json_encode($clean_extra_specs) : null;
 
 
         // 4. Date Calculations
@@ -87,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         $trans_id = $conn->insert_id;
 
-        // 7. Insert Item (Now utilizing the extra_specs JSON column!)
+        // 7. Insert Item 
         $sql_item = "INSERT INTO items 
                      (transaction_id, device_type, brand, model, serial_number, storage_capacity, ram, color, inclusions, condition_notes, appraised_value, img_front, img_back, img_serial, extra_specs) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

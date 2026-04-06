@@ -11,11 +11,11 @@ if (!isset($_GET['id'])) {
 
 $trans_id = $_GET['id'];
 
-// 2. Fetch All Data (Transaction + Customer + Item + Teller)
+// 2. Fetch All Data (Added i.extra_specs to the SELECT query!)
 $sql = "SELECT t.*, 
                p.public_id, p.first_name, p.last_name, p.contact_number, 
                a.house_no_street, a.barangay, a.city,
-               i.device_type, i.brand, i.model, i.serial_number, i.storage_capacity, i.ram, i.color, i.inclusions, i.condition_notes
+               i.device_type, i.brand, i.model, i.serial_number, i.storage_capacity, i.ram, i.color, i.inclusions, i.condition_notes, i.extra_specs
         FROM transactions t
         JOIN profiles p ON t.customer_id = p.profile_id
         JOIN addresses a ON p.profile_id = a.profile_id
@@ -34,6 +34,45 @@ if (!$data) die("Transaction not found.");
 $date_pawned = date('M d, Y', strtotime($data['date_pawned']));
 $date_maturity = date('M d, Y', strtotime($data['maturity_date']));
 $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
+
+// ==========================================
+// 3. COMPILE ALL SPECS (Standard + Dynamic)
+// ==========================================
+$specs_list = [];
+
+// Add standard specs if they exist
+if (!empty($data['ram']) && $data['ram'] !== 'N/A') {
+    $specs_list[] = "RAM: " . htmlspecialchars($data['ram']);
+}
+if (!empty($data['storage_capacity']) && $data['storage_capacity'] !== 'N/A') {
+    $specs_list[] = "Storage: " . htmlspecialchars($data['storage_capacity']);
+}
+
+// Add dynamic specs from JSON
+if (!empty($data['extra_specs'])) {
+    $extra = json_decode($data['extra_specs'], true);
+    if (is_array($extra)) {
+        foreach ($extra as $key => $val) {
+            // Skip empty/NA values and skip color (since we handle color below to avoid duplicates)
+            if ($val !== 'N/A' && $val !== '' && $key !== 'color') {
+                $clean_label = ucwords(str_replace('_', ' ', $key));
+                $specs_list[] = htmlspecialchars($clean_label) . ": " . htmlspecialchars($val);
+            }
+        }
+    }
+}
+
+// Add color at the end if it exists
+if (!empty($data['color']) && $data['color'] !== 'N/A') {
+    $specs_list[] = "Color: " . htmlspecialchars($data['color']);
+}
+
+// Join them all together with a pipe separator
+$specs_string = implode(' | ', $specs_list);
+// If no specs exist at all, just say N/A
+if (empty($specs_string)) {
+    $specs_string = "N/A";
+}
 ?>
 
 <!DOCTYPE html>
@@ -45,11 +84,11 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        body { background: #525659; font-family: 'Inter', sans-serif; } /* Dark grey background like PDF viewer */
+        body { background: #525659; font-family: 'Inter', sans-serif; } 
         .ticket-container {
             background: white;
-            width: 816px; /* Approx Letter size width */
-            min-height: 1056px; /* Approx Letter size height */
+            width: 816px; 
+            min-height: 1056px; 
             margin: 30px auto;
             padding: 48px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
@@ -81,7 +120,6 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
 
 <div class="ticket-container">
     
-    <!-- Header -->
     <div class="row align-items-center mb-4 border-bottom border-2 border-dark pb-3">
         <div class="col-8">
             <div class="header-logo text-uppercase"><i class="bi bi-shield-lock-fill"></i> ArMaTech Gadgets</div>
@@ -101,9 +139,7 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
         </div>
     </div>
 
-    <!-- Info Grid -->
     <div class="row g-0 mb-4 border border-dark">
-        <!-- Customer Info -->
         <div class="col-6 p-4 border-end border-dark">
             <h6 class="fw-bold text-uppercase text-secondary small mb-3">Pawnee Information</h6>
             <h4 class="fw-bold mb-1"><?php echo strtoupper($data['first_name'] . ' ' . $data['last_name']); ?></h4>
@@ -112,7 +148,6 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
             <p class="mb-0 small text-muted"><i class="bi bi-telephone-fill"></i> <?php echo $data['contact_number']; ?></p>
         </div>
         
-        <!-- Loan Info -->
         <div class="col-6 p-4 bg-light">
              <h6 class="fw-bold text-uppercase text-secondary small mb-3">Loan Details</h6>
              
@@ -138,7 +173,6 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
         </div>
     </div>
 
-    <!-- Item Details -->
     <div class="mb-4">
         <h6 class="fw-bold text-uppercase small mb-2">Item Description</h6>
         <table class="table table-bordered border-dark">
@@ -150,20 +184,19 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
             </thead>
             <tbody>
                 <tr>
-                    <td class="fw-bold text-uppercase align-middle"><?php echo $data['device_type']; ?></td>
+                    <td class="fw-bold text-uppercase align-middle"><?php echo htmlspecialchars($data['device_type']); ?></td>
                     <td class="py-3" style="font-family: 'Courier Prime', monospace;">
-                        <strong><?php echo $data['brand'] . ' ' . $data['model']; ?></strong><br>
-                        <small class="text-muted">Serial: <?php echo $data['serial_number']; ?></small><br>
-                        <span class="small">Specs: <?php echo $data['storage_capacity'] . ' | ' . $data['ram'] . ' | ' . $data['color']; ?></span><br>
-                        <span class="small">Inclusions: <?php echo $data['inclusions']; ?></span><br>
-                        <span class="small fst-italic">Condition: <?php echo $data['condition_notes']; ?></span>
+                        <strong><?php echo htmlspecialchars($data['brand'] . ' ' . $data['model']); ?></strong><br>
+                        <small class="text-muted">Serial: <?php echo htmlspecialchars($data['serial_number']); ?></small><br>
+                        <span class="small">Specs: <?php echo $specs_string; ?></span><br>
+                        <span class="small">Inclusions: <?php echo htmlspecialchars($data['inclusions']); ?></span><br>
+                        <span class="small fst-italic">Condition: <?php echo htmlspecialchars($data['condition_notes']); ?></span>
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Terms -->
     <div class="legal-text mb-5 p-3 border border-secondary bg-light">
         <strong>TERMS AND CONDITIONS:</strong><br>
         1. The pawner hereby accepts the pawn ticket and agrees to all terms and conditions stated herein.<br>
@@ -174,7 +207,6 @@ $date_expiry = date('M d, Y', strtotime($data['expiry_date']));
         6. This ticket must be presented upon redemption or renewal. If lost, an affidavit of loss must be submitted immediately.
     </div>
 
-    <!-- Signatures -->
     <div class="row text-center mt-5">
         <div class="col-6">
             <div class="signature-line"></div>
