@@ -37,7 +37,7 @@ $customer = $result->fetch_assoc();
     /* Security Check Toggles */
     .security-check { border: 2px solid var(--fintech-border); transition: all 0.2s ease; cursor: pointer; border-radius: 1rem; }
     .btn-check:checked + .security-check { border-color: #198754; background-color: rgba(25, 135, 84, 0.05); }
-    .btn-check:checked + .security-check .status-icon { color: #198754; content: "\f058"; } /* Check-circle icon */
+    .btn-check:checked + .security-check .status-icon { color: #198754; content: "\f058"; } 
     
     /* Inclusions Pills */
     .btn-check:checked + .inc-pill { background-color: var(--fintech-primary); color: white; border-color: var(--fintech-primary); box-shadow: 0 4px 10px rgba(13,110,253,0.3); transform: translateY(-2px); }
@@ -110,7 +110,7 @@ $customer = $result->fetch_assoc();
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <select name="device_type" id="device_type" class="form-select" required onchange="toggleSpecs()">
+                                    <select name="device_type" id="device_type" class="form-select" required onchange="fetchApiSpecs()">
                                         <option value="" disabled selected>Select Category...</option>
                                         <option value="Smartphone">Smartphone</option>
                                         <option value="Laptop">Laptop</option>
@@ -124,10 +124,10 @@ $customer = $result->fetch_assoc();
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="text" name="brand" class="form-control" list="brands" placeholder="Brand" required autocomplete="off">
+                                    <input type="text" name="brand" id="brand_input" class="form-control" list="brands" placeholder="Brand" required autocomplete="off">
                                     <label>Brand / Manufacturer <span class="text-danger">*</span></label>
                                     <datalist id="brands">
-                                        <option value="Apple"><option value="Samsung"><option value="Xiaomi"><option value="Oppo"><option value="Vivo"><option value="Lenovo"><option value="Sony"><option value="Canon"><option value="Nikon">
+                                        <option value="Apple"><option value="Samsung"><option value="Sony">
                                     </datalist>
                                 </div>
                             </div>
@@ -147,39 +147,7 @@ $customer = $result->fetch_assoc();
                         </div>
 
                         <div class="row g-3 mb-5" id="dynamic_specs">
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <select name="storage" class="form-select">
-                                        <option value="N/A">N/A</option>
-                                        <option value="64GB">64GB</option>
-                                        <option value="128GB" selected>128GB</option>
-                                        <option value="256GB">256GB</option>
-                                        <option value="512GB">512GB</option>
-                                        <option value="1TB">1TB</option>
-                                    </select>
-                                    <label>Storage Cap.</label>
-                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <select name="ram" class="form-select">
-                                        <option value="N/A">N/A</option>
-                                        <option value="4GB">4GB</option>
-                                        <option value="8GB" selected>8GB</option>
-                                        <option value="12GB">12GB</option>
-                                        <option value="16GB">16GB</option>
-                                        <option value="32GB">32GB</option>
-                                    </select>
-                                    <label>Memory (RAM)</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="text" name="color" class="form-control" placeholder="Color">
-                                    <label>Device Color</label>
-                                </div>
-                            </div>
-                        </div>
 
                         <hr class="my-5 opacity-10">
 
@@ -205,7 +173,7 @@ $customer = $result->fetch_assoc();
                                     <div class="me-3 fs-3 text-muted"><i class="fa-solid fa-lock-open status-icon"></i></div>
                                     <div>
                                         <span class="d-block fw-bold text-dark mb-1">Passcode Removed?</span>
-                                        <span class="small text-muted d-block" style="font-size: 0.7rem; line-height:1.2;">Device must be accessible for testing/reset.</span>
+                                        <span class="small text-muted d-block" style="font-size: 0.7rem; line-height:1.2;">Device must be accessible for testing.</span>
                                     </div>
                                 </label>
                             </div>
@@ -330,7 +298,7 @@ $customer = $result->fetch_assoc();
                         </div>
 
                         <button type="button" class="btn btn-primary w-100 btn-lg rounded-pill shadow fw-bold py-3" onclick="prepareReviewModal()">
-                            <i class="fa-solid fa-lock me-2"></i> REVIEW & GENERATE CONTRACT
+                            <i class="fa-solid fa-lock me-2"></i> REVIEW & GENERATE
                         </button>
                     </div>
                 </div>
@@ -373,6 +341,111 @@ $customer = $result->fetch_assoc();
 </div>
 
 <script>
+// 1. Python Flask API Base URL (Make sure app.py is running!)
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+
+// 2. Fetch Schema from API dynamically
+async function fetchApiSpecs() {
+    const category = document.getElementById('device_type').value;
+    const container = document.getElementById('dynamic_specs');
+    
+    // Clear input fields and clear the dynamic container
+    document.getElementById('brand_input').value = "";
+    container.innerHTML = ''; 
+    
+    if (!category) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/schema/${category}`);
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            const specs = data.dynamic_specs;
+            
+            // A. Populate Brands Datalist (Since Brand is hardcoded outside the dynamic block)
+            if (specs.brands) {
+                const brandList = document.getElementById('brands');
+                brandList.innerHTML = ''; 
+                specs.brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand;
+                    brandList.appendChild(option);
+                });
+            }
+
+            // B. DYNAMICALLY GENERATE DROPDOWNS FOR EVERYTHING ELSE!
+            for (const [key, values] of Object.entries(specs)) {
+                if (key === 'brands') continue; // We already did brands
+
+                // Make the label look nice (e.g., 'camera_type' -> 'Camera Type')
+                let labelText = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                // Create outer column
+                let colDiv = document.createElement('div');
+                colDiv.className = 'col-md-4';
+
+                // Create Bootstrap floating div
+                let floatDiv = document.createElement('div');
+                floatDiv.className = 'form-floating';
+
+                // Create SELECT element. 
+                // We name it extra_specs[key] so PHP bundles them into an array!
+                let select = document.createElement('select');
+                select.name = `extra_specs[${key}]`; 
+                select.className = 'form-select bg-light border-0';
+
+                // Add a default "N/A" option
+                let defaultOpt = document.createElement('option');
+                defaultOpt.value = "N/A";
+                defaultOpt.innerText = "N/A";
+                select.appendChild(defaultOpt);
+
+                // Add options from Python API
+                values.forEach(val => {
+                    let option = document.createElement('option');
+                    option.value = val;
+                    option.innerText = val;
+                    select.appendChild(option);
+                });
+
+                // Create Label
+                let label = document.createElement('label');
+                label.innerText = labelText;
+
+                // Stitch them together and push to container
+                floatDiv.appendChild(select);
+                floatDiv.appendChild(label);
+                colDiv.appendChild(floatDiv);
+                container.appendChild(colDiv);
+            }
+
+            // C. Always manually append the 'Color' field at the end
+            // Note: named 'color' because your DB explicitly has a 'color' column
+            container.innerHTML += `
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="text" name="color" class="form-control bg-light border-0" placeholder="Color">
+                        <label>Device Color</label>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error("API Error - Could not connect to Python backend:", error);
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger small mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i> Error connecting to the specification database. Please enter details manually in the condition notes.</div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-floating">
+                    <input type="text" name="color" class="form-control bg-light border-0" placeholder="Color">
+                    <label>Device Color</label>
+                </div>
+            </div>
+        `;
+    }
+}
+
 function updateNet() {
     let principalInput = document.getElementById('principal').value;
     let principal = parseFloat(principalInput) || 0;
@@ -393,28 +466,13 @@ function updateNet() {
 function updateDates() {
     let months = parseInt(document.getElementById('term_months').value);
     let today = new Date();
-    
     let maturity = new Date(today);
     maturity.setMonth(today.getMonth() + months);
-    
     let expiry = new Date(maturity);
     expiry.setDate(maturity.getDate() + 30); 
-
     let options = { year: 'numeric', month: 'short', day: 'numeric' };
     document.getElementById('maturity_display').innerText = maturity.toLocaleDateString('en-US', options);
     document.getElementById('expiry_display').innerText = expiry.toLocaleDateString('en-US', options);
-}
-
-function toggleSpecs() {
-    const type = document.getElementById('device_type').value;
-    const specRow = document.getElementById('dynamic_specs');
-    const hideFor = ['Camera', 'Gaming Console', 'Smartwatch'];
-    
-    if (hideFor.includes(type)) {
-        specRow.style.display = 'none';
-    } else {
-        specRow.style.display = 'flex';
-    }
 }
 
 function previewImage(input, imgId) {
@@ -433,13 +491,11 @@ function previewImage(input, imgId) {
 
 function prepareReviewModal() {
     let form = document.getElementById('pawnForm');
-    
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
         form.querySelector(':invalid').focus();
         return;
     }
-
     let brand = document.querySelector('input[name="brand"]').value;
     let model = document.querySelector('input[name="model"]').value;
     let serial = document.getElementById('serial').value;
@@ -455,8 +511,10 @@ function prepareReviewModal() {
 
 document.getElementById('pawnForm').addEventListener('submit', function() {
     let btn = document.getElementById('finalSubmitBtn');
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
-    btn.disabled = true;
+    setTimeout(function() {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
+        btn.disabled = true;
+    }, 50); 
 });
 
 window.onload = function() {
