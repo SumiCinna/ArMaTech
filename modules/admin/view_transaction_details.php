@@ -57,14 +57,24 @@ $stmt_p->bind_param("i", $trans_id);
 $stmt_p->execute();
 $payments = $stmt_p->get_result();
 
-// Device Icon Logic
+// ==========================================
+// Device Icon Logic (Updated for New Categories)
+// ==========================================
 $dt = $t['device_type'];
 $device_icon = 'fa-box';
-if ($dt == 'Smartphone' || $dt == 'Tablet') $device_icon = 'fa-mobile-screen';
-elseif ($dt == 'Laptop') $device_icon = 'fa-laptop';
-elseif ($dt == 'Camera') $device_icon = 'fa-camera';
-elseif ($dt == 'Gaming Console') $device_icon = 'fa-gamepad';
-elseif ($dt == 'Smartwatch') $device_icon = 'fa-clock';
+if ($dt == 'Smartphone' || $dt == 'Smartphones' || $dt == 'Tablet' || $dt == 'Tablets') {
+    $device_icon = 'fa-mobile-screen';
+} elseif ($dt == 'Laptop' || $dt == 'Laptops & Computers') {
+    $device_icon = 'fa-laptop';
+} elseif ($dt == 'Camera' || $dt == 'Cameras & Lenses') {
+    $device_icon = 'fa-camera';
+} elseif ($dt == 'Gaming Console' || $dt == 'Gaming Consoles') {
+    $device_icon = 'fa-gamepad';
+} elseif ($dt == 'Smartwatch' || $dt == 'Wearables') {
+    $device_icon = 'fa-clock';
+} elseif ($dt == 'Audio Equipment') {
+    $device_icon = 'fa-headphones';
+}
 
 // Status & Color Logic
 $status = $t['status'];
@@ -239,7 +249,7 @@ if (!empty($t['extra_specs'])) {
                             <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center mb-3 text-primary border border-primary border-opacity-25" style="width: 80px; height: 80px;">
                                 <i class="fa-solid <?php echo $device_icon; ?> fa-2x"></i>
                             </div>
-                            <h5 class="fw-bold text-dark mb-0"><?php echo htmlspecialchars($t['device_type']); ?></h5>
+                            <h5 class="fw-bold text-dark mb-0 text-center"><?php echo htmlspecialchars($t['device_type']); ?></h5>
                             <span class="badge bg-secondary bg-opacity-10 text-secondary mt-2 border border-secondary border-opacity-25 px-3 rounded-pill">Category</span>
                         </div>
                         
@@ -269,17 +279,18 @@ if (!empty($t['extra_specs'])) {
                                 
                                 // Show Dynamic Python API Data
                                 if (!empty($dynamic_specs)) {
-                                    $skip_keys = ['ram', 'storage', 'color'];
                                     foreach ($dynamic_specs as $key => $value) {
-                                        if ($value == 'N/A' || in_array(strtolower($key), $skip_keys)) continue; 
+                                        // Filter out N/A, empty strings, and 'color' (since we render it specially below)
+                                        if (trim($value) === '' || $value === 'N/A' || strtolower($key) === 'color') continue; 
+                                        
                                         $clean_label = ucwords(str_replace('_', ' ', $key));
                                         echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">' . htmlspecialchars($clean_label) . ': ' . htmlspecialchars($value) . '</span>';
                                     }
                                 }
 
                                 // Show Color specifically
-                                if (!empty($dynamic_specs['color']) || (!empty($t['color']) && $t['color'] != 'N/A')) {
-                                    $color_val = !empty($dynamic_specs['color']) ? $dynamic_specs['color'] : $t['color'];
+                                $color_val = !empty($dynamic_specs['color']) ? $dynamic_specs['color'] : (!empty($t['color']) ? $t['color'] : '');
+                                if (!empty($color_val) && $color_val != 'N/A') {
                                     echo '<span class="badge bg-light text-dark border px-3 py-2 fw-bold shadow-sm">Color: ' . htmlspecialchars($color_val) . '</span>';
                                 }
                                 ?>
