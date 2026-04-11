@@ -1,7 +1,49 @@
 <?php
 // modules/customer/shop.php
 require_once '../../config/database.php';
+require_once '../../core/reservation_expiry.php';
 include_once '../../includes/customer_header.php';
+
+/**
+ * Resolve an item image value from DB into filesystem path + browser URL.
+ * Supports values saved as plain filename or path like uploads/pawn_items/file.jpg.
+ */
+function resolve_shop_image_path(?string $dbValue): ?array {
+    $value = trim((string)$dbValue);
+    if ($value === '') {
+        return null;
+    }
+
+    $value = str_replace('\\', '/', $value);
+    $baseFsDir = realpath(__DIR__ . '/../../uploads/pawn_items');
+    if ($baseFsDir === false) {
+        return null;
+    }
+
+    // Normalize to filename under uploads/pawn_items.
+    if (strpos($value, 'uploads/pawn_items/') !== false) {
+        $fileName = basename($value);
+    } else {
+        $fileName = basename($value);
+    }
+
+    if ($fileName === '' || $fileName === '.' || $fileName === '..') {
+        return null;
+    }
+
+    $fsPath = $baseFsDir . DIRECTORY_SEPARATOR . $fileName;
+    if (!file_exists($fsPath)) {
+        return null;
+    }
+
+    return [
+        'fs' => $fsPath,
+        'url' => '../../uploads/pawn_items/' . rawurlencode($fileName),
+    ];
+}
+
+// Ensure overdue unpaid reservations are auto-forfeited before listing shop items.
+run_reservation_expiry($conn);
 
 // 1. Handle Search and Filters safely
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -10,7 +52,7 @@ $category = isset($_GET['category']) ? trim($_GET['category']) : '';
 // Base Query
 $sql = "SELECT s.shop_id, s.selling_price, s.date_published,
                i.item_id, i.device_type AS item_name, i.brand, i.model, i.device_type AS item_type, i.inclusions AS item_description,
-               i.img_front, i.img_back
+           i.img_front, i.img_back, i.img_serial
         FROM shop_items s
         JOIN items i ON s.item_id = i.item_id
         WHERE s.shop_status = 'available'";
@@ -125,9 +167,20 @@ while($c = $cat_res->fetch_assoc()) {
                         <!-- Visual Header & Image Container -->
                         <div class="product-image-container position-relative bg-light" style="height: 220px;">
                             <?php 
-                                $upload_dir = '../../uploads/pawn_items/';
-                                $front_img = !empty($item['img_front']) && file_exists($upload_dir . $item['img_front']) ? $upload_dir . $item['img_front'] : '';
-                                $back_img = !empty($item['img_back']) && file_exists($upload_dir . $item['img_back']) ? $upload_dir . $item['img_back'] : '';
+                                $frontInfo = resolve_shop_image_path($item['img_front'] ?? '');
+                                $backInfo  = resolve_shop_image_path($item['img_back'] ?? '');
+                                $serialInfo = resolve_shop_image_path($item['img_serial'] ?? '');
+
+                                // Primary image preference: front > back > serial
+                                $front_img = $frontInfo['url'] ?? ($backInfo['url'] ?? ($serialInfo['url'] ?? ''));
+
+                                // Secondary image preference for hover flip: back > serial (only if different)
+                                $back_img = '';
+                                if (!empty($backInfo['url']) && $backInfo['url'] !== $front_img) {
+                                    $back_img = $backInfo['url'];
+                                } elseif (!empty($serialInfo['url']) && $serialInfo['url'] !== $front_img) {
+                                    $back_img = $serialInfo['url'];
+                                }
                             ?>
 
                             <?php if ($front_img): ?>
@@ -199,75 +252,69 @@ while($c = $cat_res->fetch_assoc()) {
                 </div>
 
                 <div class="modal fade" id="reserveModal<?php echo $item['shop_id']; ?>" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                            <div class="modal-header bg-dark text-white border-0 p-4">
-                                <div>
-                                    <small class="text-uppercase text-white-50 fw-bold ls-1" style="font-size: 0.7rem;">Checkout Summary</small>
-                                    <h5 class="modal-title fw-bold mb-0">Secure Your Item</h5>
-                                </div>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+ 
+            <div class="modal-header bg-dark text-white border-0 p-4">
+                <div>
+                    <small class="text-uppercase text-white-50 fw-bold ls-1" style="font-size: 0.7rem;">Reservation Summary</small>
+                    <h5 class="modal-title fw-bold mb-0">Secure Your Item</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+ 
+            <form action="../../core/process_reservation.php" method="POST">
+                <div class="modal-body p-4 text-start bg-light">
+                    <input type="hidden" name="shop_id" value="<?php echo $item['shop_id']; ?>">
+                    <?php $downpayment = $item['selling_price'] * 0.10; ?>
+                    <input type="hidden" name="reservation_amount" value="<?php echo $downpayment; ?>">
+ 
+                    <!-- Item summary card -->
+                    <div class="bg-white p-3 rounded-4 shadow-sm border mb-4">
+                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                            <div class="bg-light rounded-3 p-2 me-3">
+                                <i class="fa-solid fa-mobile-screen-button fa-2x text-secondary"></i>
                             </div>
-                            
-                            <form action="../../core/process_reservation.php" method="POST" enctype="multipart/form-data">
-                                <div class="modal-body p-4 text-start bg-light">
-                                    <input type="hidden" name="shop_id" value="<?php echo $item['shop_id']; ?>">
-                                    <?php $downpayment = $item['selling_price'] * 0.10; ?>
-                                    <input type="hidden" name="reservation_amount" value="<?php echo $downpayment; ?>">
-
-                                    <div class="bg-white p-3 rounded-4 shadow-sm border mb-4">
-                                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                                            <div class="bg-light rounded p-2 me-3">
-                                                <i class="fa-solid <?php echo $icon; ?> fa-2x text-secondary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="fw-bold mb-0"><?php echo $item['brand'] . ' ' . $item['model']; ?></h6>
-                                                <small class="text-muted"><?php echo $item['item_type']; ?></small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2 small">
-                                            <span class="text-muted">Total Selling Price</span>
-                                            <span class="fw-bold">₱<?php echo number_format($item['selling_price'], 2); ?></span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2 small">
-                                            <span class="text-muted">Required Deposit Rate</span>
-                                            <span class="fw-bold">10%</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                                            <span class="fw-bold text-dark">Amount to Pay Now</span>
-                                            <h4 class="fw-bold text-primary mb-0">₱<?php echo number_format($downpayment, 2); ?></h4>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-primary border-0 bg-primary bg-opacity-10 d-flex align-items-start mb-4">
-                                        <i class="fa-solid fa-mobile-screen-button fs-4 me-3 text-primary mt-1"></i>
-                                        <div class="small text-dark">
-                                            <strong>Send Payment via GCash/Maya</strong><br>
-                                            Send exactly <strong>₱<?php echo number_format($downpayment, 2); ?></strong> to <strong class="text-primary">0912-345-6789</strong>. Save the screenshot and reference number.
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold text-muted text-uppercase">Reference Number</label>
-                                        <input type="text" name="reference_number" class="form-control form-control-lg border-0 shadow-sm rounded-3 font-monospace" placeholder="e.g. 10023948572" required>
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold text-muted text-uppercase">Proof of Payment</label>
-                                        <input type="file" name="receipt_image" class="form-control form-control-lg border-0 shadow-sm rounded-3" accept="image/png, image/jpeg, image/jpg" required>
-                                        <div class="form-text text-muted" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-info me-1"></i>Accepted formats: JPG, PNG. Max size: 2MB.</div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0 p-4 pt-0 bg-light">
-                                    <button type="button" class="btn btn-light border fw-bold w-100 mb-2 rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" name="btn_reserve" class="btn btn-primary fw-bold w-100 rounded-pill shadow-sm py-2">
-                                        <i class="fa-solid fa-lock me-2"></i> Submit Reservation
-                                    </button>
-                                </div>
-                            </form>
+                            <div>
+                                <h6 class="fw-bold mb-0"><?php echo htmlspecialchars($item['brand'] . ' ' . $item['model']); ?></h6>
+                                <small class="text-muted"><?php echo htmlspecialchars($item['item_name']); ?></small>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Total Selling Price</span>
+                            <span class="fw-bold">₱<?php echo number_format($item['selling_price'], 2); ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Required Deposit Rate</span>
+                            <span class="fw-bold">10%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <span class="fw-bold text-dark">Pay Now via PayMongo</span>
+                            <h4 class="fw-bold text-primary mb-0">₱<?php echo number_format($downpayment, 2); ?></h4>
+                        </div>
+                    </div>
+ 
+                    <!-- PayMongo info banner -->
+                    <div class="alert alert-primary border-0 bg-primary bg-opacity-10 d-flex align-items-start mb-0">
+                        <i class="fa-solid fa-shield-halved fs-4 me-3 text-primary mt-1"></i>
+                        <div class="small text-dark">
+                            <strong>Secure Online Payment</strong><br>
+                            After clicking Reserve, you'll be taken to a secure PayMongo checkout page where you can pay via <strong>GCash</strong> or <strong>Credit/Debit Card</strong>. No manual transfer needed.
                         </div>
                     </div>
                 </div>
+ 
+                <div class="modal-footer border-0 p-4 pt-0 bg-light">
+                    <button type="button" class="btn btn-light border fw-bold w-100 mb-2 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="btn_reserve" class="btn btn-primary fw-bold w-100 rounded-pill shadow-sm py-2">
+                        <i class="fa-solid fa-lock me-2"></i> Reserve & Pay Now →
+                    </button>
+                </div>
+            </form>
+ 
+        </div>
+    </div>
+</div>
 
             <?php endwhile; ?>
         <?php else: ?>

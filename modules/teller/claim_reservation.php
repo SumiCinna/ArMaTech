@@ -1,7 +1,11 @@
 <?php
 // modules/teller/claim_reservation.php
 require_once '../../config/database.php';
+require_once '../../core/reservation_expiry.php';
 include_once '../../includes/teller_header.php';
+
+// Keep reservation statuses synchronized before loading approved claims.
+run_reservation_expiry($conn);
 
 // Pagination & Search Setup
 $limit = 10;

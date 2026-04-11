@@ -9,65 +9,86 @@ if (!isset($_SESSION['account_id'])) {
     exit();
 }
 
-if (isset($_POST['btn_reserve'])) {
-    
-    // 1. Get Customer Profile ID
-    $stmt_prof = $conn->prepare("SELECT profile_id FROM accounts WHERE account_id = ?");
-    $stmt_prof->bind_param("i", $_SESSION['account_id']);
-    $stmt_prof->execute();
-    $profile_id = $stmt_prof->get_result()->fetch_assoc()['profile_id'];
-
-    // 2. Gather form data
-    $shop_id = intval($_POST['shop_id']);
-    $reservation_amount = floatval($_POST['reservation_amount']);
-    $ref_num = trim($_POST['reference_number']);
-
-    // 3. Handle File Upload
-    // IMPORTANT: Ensure the 'assets/receipts/' folder exists in your project directory!
-    $target_dir = "../assets/receipts/"; 
-    
-    // Create a unique file name to prevent overwriting
-    $file_extension = pathinfo($_FILES["receipt_image"]["name"], PATHINFO_EXTENSION);
-    $new_filename = "receipt_" . time() . "_" . $profile_id . "." . $file_extension;
-    $target_file = $target_dir . $new_filename;
-    
-    // Basic validation for images
-    $imageFileType = strtolower($file_extension);
-    if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
-        header("Location: ../modules/customer/shop.php?error=Only JPG, JPEG, and PNG files are allowed.");
-        exit();
-    }
-
-    if (move_uploaded_file($_FILES["receipt_image"]["tmp_name"], $target_file)) {
-        
-        // 4. Insert into shop_reservations table
-        $sql_res = "INSERT INTO shop_reservations (shop_id, customer_profile_id, reservation_amount, reference_number, receipt_image, status) 
-                    VALUES (?, ?, ?, ?, ?, 'pending')";
-        $stmt_res = $conn->prepare($sql_res);
-        $stmt_res->bind_param("iidss", $shop_id, $profile_id, $reservation_amount, $ref_num, $new_filename);
-        
-        if ($stmt_res->execute()) {
-            
-            // 5. Update shop_items status to 'reserved' so no one else can buy it
-            $sql_update = "UPDATE shop_items SET shop_status = 'reserved' WHERE shop_id = ?";
-            $stmt_update = $conn->prepare($sql_update);
-            $stmt_update->bind_param("i", $shop_id);
-            $stmt_update->execute();
-
-            // Success Redirect
-            header("Location: ../modules/customer/shop.php?msg=Reservation submitted! Pending admin verification.");
-            exit();
-
-        } else {
-            header("Location: ../modules/customer/shop.php?error=Database error during reservation.");
-            exit();
-        }
-    } else {
-        header("Location: ../modules/customer/shop.php?error=Failed to upload receipt image.");
-        exit();
-    }
-} else {
+if (!isset($_POST['btn_reserve'])) {
     header("Location: ../modules/customer/shop.php");
     exit();
 }
+
+// 1. Get Customer Profile ID
+$stmt_prof = $conn->prepare("SELECT profile_id FROM accounts WHERE account_id = ?");
+$stmt_prof->bind_param("i", $_SESSION['account_id']);
+$stmt_prof->execute();
+$result_prof = $stmt_prof->get_result()->fetch_assoc();
+
+if (!$result_prof) {
+    header("Location: ../modules/customer/shop.php?error=Account+profile+not+found.");
+    exit();
+}
+
+$profile_id = $result_prof['profile_id'];
+
+// 2. Gather and sanitize form data
+$shop_id            = intval($_POST['shop_id']);
+$reservation_amount = floatval($_POST['reservation_amount']);
+
+if (!$shop_id || $reservation_amount <= 0) {
+    header("Location: ../modules/customer/shop.php?error=Invalid+reservation+data.");
+    exit();
+}
+
+// 3. Make sure the item is still available (re-check at this moment)
+$stmt_check = $conn->prepare("SELECT shop_status FROM shop_items WHERE shop_id = ?");
+$stmt_check->bind_param("i", $shop_id);
+$stmt_check->execute();
+$item = $stmt_check->get_result()->fetch_assoc();
+
+if (!$item || $item['shop_status'] !== 'available') {
+    header("Location: ../modules/customer/shop.php?error=Sorry,+this+item+is+no+longer+available.");
+    exit();
+}
+
+// 4. Check if customer already has an active reservation for this item
+$stmt_dup = $conn->prepare("
+    SELECT reservation_id FROM shop_reservations
+    WHERE shop_id = ? AND customer_profile_id = ?
+    AND status IN ('pending_payment', 'pending_verification', 'pending', 'approved')
+    LIMIT 1
+");
+$stmt_dup->bind_param("ii", $shop_id, $profile_id);
+$stmt_dup->execute();
+$dup = $stmt_dup->get_result()->fetch_assoc();
+
+if ($dup) {
+    // Already has a reservation — send straight to payment
+    header("Location: ../modules/customer/pay.php?reservation_id=" . $dup['reservation_id']);
+    exit();
+}
+
+// 5. Insert reservation — item stays 'available' until payment is confirmed
+$stmt_res = $conn->prepare("
+    INSERT INTO shop_reservations 
+        (shop_id, customer_profile_id, reservation_amount, status, payment_status) 
+    VALUES 
+        (?, ?, ?, 'pending_payment', 'unpaid')
+");
+
+if (!$stmt_res) {
+    header("Location: ../modules/customer/shop.php?error=DB+setup+error:+" . urlencode($conn->error));
+    exit();
+}
+
+$stmt_res->bind_param("iid", $shop_id, $profile_id, $reservation_amount);
+
+if (!$stmt_res->execute()) {
+    header("Location: ../modules/customer/shop.php?error=Reservation+failed:+" . urlencode($stmt_res->error));
+    exit();
+}
+
+$reservation_id = $conn->insert_id;
+
+
+
+// 6. Redirect to PayMongo checkout
+header("Location: ../modules/customer/pay.php?reservation_id=" . $reservation_id);
+exit();
 ?>

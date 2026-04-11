@@ -4,7 +4,7 @@ date_default_timezone_set('Asia/Manila');
 
 $host = "localhost";
 $user = "root";
-$pass = "200427";
+$pass = "DREAMTEAM";
 $dbname = "armatech";
 
 $conn = new mysqli($host, $user, $pass, $dbname);
