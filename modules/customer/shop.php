@@ -42,6 +42,95 @@ function resolve_shop_image_path(?string $dbValue): ?array {
     ];
 }
 
+/**
+ * Fallback resolver using PT naming convention from pawn upload flow:
+ * PT-YYYY-XXXXX_front_*.jpg, _back_*.jpg, _serial_*.jpg
+ */
+function resolve_shop_image_by_pt(?string $ptNumber, string $type): ?array {
+    $pt = trim((string)$ptNumber);
+    if ($pt === '') {
+        return null;
+    }
+
+    $baseFsDir = realpath(__DIR__ . '/../../uploads/pawn_items');
+    if ($baseFsDir === false) {
+        return null;
+    }
+
+    $safeType = in_array($type, ['front', 'back', 'serial'], true) ? $type : 'front';
+    $pattern = $baseFsDir . DIRECTORY_SEPARATOR . $pt . '_' . $safeType . '_*';
+    $matches = glob($pattern);
+
+    if (empty($matches)) {
+        return null;
+    }
+
+    usort($matches, function ($a, $b) {
+        return filemtime($b) <=> filemtime($a);
+    });
+
+    $fileName = basename($matches[0]);
+    return [
+        'fs' => $matches[0],
+        'url' => '../../uploads/pawn_items/' . rawurlencode($fileName),
+    ];
+}
+
+/**
+ * Temporary fallback: choose a random PT image set in pawn_item_entry format.
+ * Returns stable front + optional back/serial from the same PT prefix.
+ */
+function get_random_pt_fallback_set(): ?array {
+    static $frontPool = null;
+    static $baseFsDir = null;
+
+    if ($frontPool === null) {
+        $baseFsDir = realpath(__DIR__ . '/../../uploads/pawn_items');
+        if ($baseFsDir === false) {
+            $frontPool = [];
+        } else {
+            $frontPool = glob($baseFsDir . DIRECTORY_SEPARATOR . 'PT-*_front_*') ?: [];
+        }
+    }
+
+    if (empty($frontPool) || $baseFsDir === false || $baseFsDir === null) {
+        return null;
+    }
+
+    $frontPath = $frontPool[array_rand($frontPool)];
+    $frontName = basename($frontPath);
+
+    $parts = explode('_front_', $frontName, 2);
+    if (count($parts) !== 2) {
+        return [
+            'front' => '../../uploads/pawn_items/' . rawurlencode($frontName),
+            'back' => null,
+            'serial' => null,
+        ];
+    }
+
+    $ptPrefix = $parts[0];
+    $suffix = $parts[1];
+
+    $backPathExact = $baseFsDir . DIRECTORY_SEPARATOR . $ptPrefix . '_back_' . $suffix;
+    $serialPathExact = $baseFsDir . DIRECTORY_SEPARATOR . $ptPrefix . '_serial_' . $suffix;
+
+    $backPath = file_exists($backPathExact)
+        ? $backPathExact
+        : ((glob($baseFsDir . DIRECTORY_SEPARATOR . $ptPrefix . '_back_*') ?: [])[0] ?? null);
+
+    $serialPath = file_exists($serialPathExact)
+        ? $serialPathExact
+        : ((glob($baseFsDir . DIRECTORY_SEPARATOR . $ptPrefix . '_serial_*') ?: [])[0] ?? null);
+
+    return [
+        'front' => '../../uploads/pawn_items/' . rawurlencode($frontName),
+        'back' => $backPath ? '../../uploads/pawn_items/' . rawurlencode(basename($backPath)) : null,
+        'serial' => $serialPath ? '../../uploads/pawn_items/' . rawurlencode(basename($serialPath)) : null,
+    ];
+}
+
+
 // Ensure overdue unpaid reservations are auto-forfeited before listing shop items.
 run_reservation_expiry($conn);
 
@@ -52,9 +141,11 @@ $category = isset($_GET['category']) ? trim($_GET['category']) : '';
 // Base Query
 $sql = "SELECT s.shop_id, s.selling_price, s.date_published,
                i.item_id, i.device_type AS item_name, i.brand, i.model, i.device_type AS item_type, i.inclusions AS item_description,
-           i.img_front, i.img_back, i.img_serial
+              i.img_front, i.img_back, i.img_serial,
+              t.pt_number
         FROM shop_items s
         JOIN items i ON s.item_id = i.item_id
+          JOIN transactions t ON s.transaction_id = t.transaction_id
         WHERE s.shop_status = 'available'";
 
 $params = [];
@@ -171,6 +262,33 @@ while($c = $cat_res->fetch_assoc()) {
                                 $backInfo  = resolve_shop_image_path($item['img_back'] ?? '');
                                 $serialInfo = resolve_shop_image_path($item['img_serial'] ?? '');
 
+                                // Fallback to PT-number-based uploaded filenames when DB image fields are empty.
+                                if (!$frontInfo) {
+                                    $frontInfo = resolve_shop_image_by_pt($item['pt_number'] ?? '', 'front');
+                                }
+                                if (!$backInfo) {
+                                    $backInfo = resolve_shop_image_by_pt($item['pt_number'] ?? '', 'back');
+                                }
+                                if (!$serialInfo) {
+                                    $serialInfo = resolve_shop_image_by_pt($item['pt_number'] ?? '', 'serial');
+                                }
+
+                                // If still no image, use a random PT-style fallback image set.
+                                if (!$frontInfo && !$backInfo && !$serialInfo) {
+                                    $randomSet = get_random_pt_fallback_set();
+                                    if ($randomSet) {
+                                        if (!empty($randomSet['front'])) {
+                                            $frontInfo = ['url' => $randomSet['front']];
+                                        }
+                                        if (!empty($randomSet['back'])) {
+                                            $backInfo = ['url' => $randomSet['back']];
+                                        }
+                                        if (!empty($randomSet['serial'])) {
+                                            $serialInfo = ['url' => $randomSet['serial']];
+                                        }
+                                    }
+                                }
+
                                 // Primary image preference: front > back > serial
                                 $front_img = $frontInfo['url'] ?? ($backInfo['url'] ?? ($serialInfo['url'] ?? ''));
 
@@ -181,6 +299,7 @@ while($c = $cat_res->fetch_assoc()) {
                                 } elseif (!empty($serialInfo['url']) && $serialInfo['url'] !== $front_img) {
                                     $back_img = $serialInfo['url'];
                                 }
+
                             ?>
 
                             <?php if ($front_img): ?>
