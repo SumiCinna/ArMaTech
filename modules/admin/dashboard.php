@@ -155,7 +155,10 @@ $res_top_cust = $conn->query($sql_top_cust);
             <h3 class="fw-bold text-dark mb-0"><i class="fa-solid fa-gauge-high me-2 text-primary"></i> Executive Dashboard</h3>
             <p class="text-muted small mb-0">Overview of operational metrics, revenue, and key relationships.</p>
         </div>
-        <div class="d-none d-md-block">
+        <div class="d-none d-md-flex gap-2 align-items-center">
+            <button id="btnRunReminders" class="btn btn-sm btn-outline-primary fw-bold rounded-pill shadow-sm px-3 py-2" onclick="trigger7DayReminders()">
+                <i class="fa-solid fa-paper-plane me-1"></i> Send Reminders
+            </button>
             <span class="badge bg-white text-dark border shadow-sm px-3 py-2 rounded-pill fw-bold">
                 <i class="fa-regular fa-calendar text-primary me-2"></i> <?php echo date('F d, Y'); ?>
             </span>
@@ -462,6 +465,38 @@ $res_top_cust = $conn->query($sql_top_cust);
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // AJAX Function for the Reminder Trigger Button
+    async function trigger7DayReminders() {
+        const btn = document.getElementById('btnRunReminders');
+        const originalText = btn.innerHTML;
+
+        // Visual loading state
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Sending...';
+        btn.disabled = true;
+
+        try {
+            // Call the PHP endpoint we created
+            const response = await fetch('../../api/send_7day_reminders.php');
+            const data = await response.json();
+
+            // Display results
+            if (data.status === 'success') {
+                alert("✅ Success: " + data.message);
+            } else if (data.status === 'info') {
+                alert("ℹ️ Info: " + data.message);
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        } catch (error) {
+            console.error("Error running reminders:", error);
+            alert("❌ A server error occurred while trying to send emails. Please check your network or server logs.");
+        } finally {
+            // Restore button
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
     Chart.defaults.font.family = "'Inter', 'Helvetica Neue', 'Arial', sans-serif";
     Chart.defaults.color = '#6c757d';
 
