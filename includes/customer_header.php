@@ -50,18 +50,18 @@ $fullname = $_SESSION['fullname'] ?? 'Customer';
             font-size: 1.5rem;
         }
         
-        .nav-link {
+        .navbar-nav .nav-link {
             color: rgba(255,255,255,0.7) !important;
             font-weight: 500;
             padding: 0.5rem 1rem !important;
             transition: all 0.2s;
             border-radius: 50px;
         }
-        .nav-link:hover {
+        .navbar-nav .nav-link:hover {
             color: #fff !important;
             background: rgba(255,255,255,0.1);
         }
-        .nav-link.active {
+        .navbar-nav .nav-link.active {
             color: #fff !important;
             background: rgba(255,255,255,0.15);
             font-weight: 600;
@@ -121,6 +121,11 @@ $fullname = $_SESSION['fullname'] ?? 'Customer';
                 <li class="nav-item px-1">
                     <a class="nav-link <?php echo ($activePage == 'dashboard') ? 'active' : ''; ?>" href="dashboard.php">
                         <i class="fa-solid fa-grip me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item px-1">
+                    <a class="nav-link <?php echo ($activePage == 'my_loans') ? 'active' : ''; ?>" href="my_loans.php">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i> My Loans
                     </a>
                 </li>
                 <li class="nav-item px-1">
