@@ -117,8 +117,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] == 'customer') {
         <form action="core/auth_customer.php" method="POST">
             
             <div class="form-floating mb-3">
-                <input type="text" name="username" class="form-control" id="floatingInput" placeholder="Username" required autofocus>
-                <label for="floatingInput">Customer ID / Username</label>
+                <input type="text" name="username" class="form-control" id="floatingInput" placeholder="Username or Email" required autofocus>
+                <label for="floatingInput">Username or Email</label>
             </div>
 
             <div class="input-group mb-4">
